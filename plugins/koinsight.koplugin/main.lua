@@ -15,6 +15,7 @@ local koinsight = WidgetContainer:extend{
 function koinsight:init()
     self.ui.menu:registerToMainMenu(self)
     self.koinsight_settings = KoInsightSettings:new{}
+    self:initMenuOrder()
 end
 
 function koinsight:addToMainMenu(menu_items)
@@ -43,6 +44,18 @@ function koinsight:addToMainMenu(menu_items)
             end
         }}
     }
+end
+
+function koinsight:initMenuOrder()
+    local filemanager_order = require("ui/elements/filemanager_menu_order")
+    local pos = 1
+    for i, val in ipairs(filemanager_order.tools) do
+        if val == "statistics" then
+            pos = i + 1
+            break
+        end
+    end
+    table.insert(filemanager_order.tools, pos, "koinsight")
 end
 
 return koinsight
