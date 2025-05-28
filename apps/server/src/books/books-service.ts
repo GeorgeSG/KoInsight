@@ -34,8 +34,15 @@ export class BooksService {
   }
 
   static getTotalReadPages(book: Book, stats: PageStat[]): number {
+    const seen_pages = new Set<number>();
     return Math.round(
       stats.reduce((acc, stat) => {
+        if (seen_pages.has(stat.page)) {
+          return acc;
+        }
+
+        seen_pages.add(stat.page);
+
         if (book.reference_pages) {
           return acc + (1 / stat.total_pages) * book.reference_pages;
         } else {
