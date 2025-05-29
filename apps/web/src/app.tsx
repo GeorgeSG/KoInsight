@@ -48,7 +48,7 @@ const theme = createTheme({
 
 export function App(): JSX.Element {
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
-
+  const version = __APP_VERSION__;
   return (
     <MantineProvider theme={theme} defaultColorScheme="light">
       <ModalsProvider>
@@ -89,7 +89,7 @@ export function App(): JSX.Element {
           <Anchor href="https://gar.dev" target="_blank">
             gar.dev
           </Anchor>
-          .
+          . {version}
         </Text>
       </ModalsProvider>
     </MantineProvider>
