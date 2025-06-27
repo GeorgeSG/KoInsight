@@ -1,7 +1,7 @@
 .Logo {
   display: flex;
   align-items: center;
-  gap: var(--mantine-spacing-xs);
+  gap: var(--mantine-spacing-md);
   color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
   text-decoration: none;
   transition: color 200ms ease;
@@ -11,4 +11,10 @@
   &:hover {
     color: var(--mantine-color-violet-text);
   }
+}
+
+.LogoImage {
+  color: var(--mantine-color-koinsight-light-color);
+  width: 32px;
+  height: 32px;
 }

@@ -1,7 +1,6 @@
 import knex, { Knex } from 'knex';
+import { appConfig } from './config';
 import config from './knexfile';
 
-const environment = process.env.NODE_ENV || 'development';
-const knexInstance: Knex = knex(config[environment]);
-
-export default knexInstance;
+const environment = appConfig.env || 'development';
+export const db: Knex = knex(config[environment]);

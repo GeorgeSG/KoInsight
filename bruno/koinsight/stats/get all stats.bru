@@ -1,0 +1,11 @@
+meta {
+  name: get all stats
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://{{host}}:{{port}}/api/stats
+  body: none
+  auth: inherit
+}

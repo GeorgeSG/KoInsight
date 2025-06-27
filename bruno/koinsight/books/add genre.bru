@@ -1,11 +1,11 @@
 meta {
   name: add genre
   type: http
-  seq: 1
+  seq: 8
 }
 
 post {
-  url: http://{{host}}:{{port}}/api/books/1/genres
+  url: http://{{host}}:{{port}}/api/books/{{book_id}}/genres
   body: json
   auth: inherit
 }

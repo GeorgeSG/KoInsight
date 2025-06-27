@@ -5,28 +5,18 @@ local JSON = require("json")
 local KoInsightDbReader = require("db_reader")
 local logger = require("logger")
 local UIManager = require("ui/uimanager")
+local const = require("const")
+local Device = require("device")
 
-local API_ENDPOINT_LOCATION = "/api/plugin/import"
+local API_UPLOAD_LOCATION = "/api/plugin/import"
+local API_DEVICE_LOCATION = "/api/plugin/device"
 
-function getHeaders(body)
+function get_headers(body)
     local headers = {
         ["Content-Type"] = "application/json",
         ["Content-Length"] = tostring(#body)
     }
     return headers
-end
-
-function gather_data()
-    local stats = KoInsightDbReader.progressData()
-    local books = KoInsightDbReader.bookData()
-
-    local body = {
-        stats = stats,
-        books = books
-    }
-
-    body = JSON.encode(body)
-    return body
 end
 
 function render_response_message(response, prefix, default_text)
@@ -41,22 +31,50 @@ function render_response_message(response, prefix, default_text)
     })
 end
 
-return function(server_url)
-    if server_url == nil or server_url == "" then
-        UIManager:show(InfoMessage:new{
-            text = _("Please set the server URL first.")
-        })
-        return
+function send_device_data(server_url)
+    local url = server_url .. API_DEVICE_LOCATION
+    local body = {
+        id = G_reader_settings:readSetting("device_id"),
+        model = Device.model,
+        version = const.VERSION
+    }
+    body = JSON.encode(body)
+
+    local ok, response = callApi("POST", url, get_headers(body), body)
+
+    if ok ~= true then
+        render_response_message(response, "Error:", "Unable to register device.")
     end
+end
 
-    local url = server_url .. API_ENDPOINT_LOCATION
-    local body = gather_data()
+function send_statistics_data(server_url)
+    local url = server_url .. API_UPLOAD_LOCATION
 
-    local ok, response = callApi("POST", url, getHeaders(body), body)
+    local body = {
+        stats = KoInsightDbReader.progressData(),
+        books = KoInsightDbReader.bookData(),
+        version = const.VERSION
+    }
+
+    body = JSON.encode(body)
+
+    local ok, response = callApi("POST", url, get_headers(body), body)
 
     if ok then
         render_response_message(response, "Success:", "Data uploaded.")
     else
         render_response_message(response, "Error:", "Data upload failed.")
     end
+end
+
+return function(server_url)
+    if server_url == nil or server_url == "" then
+        UIManager:show(InfoMessage:new{
+            text = _("Please configure the server URL first.")
+        })
+        return
+    end
+
+    send_device_data(server_url)
+    send_statistics_data(server_url)
 end

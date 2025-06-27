@@ -1,23 +1,18 @@
-require('dotenv').config();
-
 import cors from 'cors';
 import express, { Request, Response } from 'express';
 import { Server } from 'http';
 import morgan from 'morgan';
 import path from 'path';
-import { WEB_BUILD_PATH } from './const';
-import knex from './knex';
-import { booksRouter } from './routes/books-router';
-import { kosyncRouter } from './routes/kosync-router';
-import { openAiRouter } from './routes/open-ai-router';
-import { openLibraryRouter } from './routes/open-library-router';
-import { pluginRouter } from './routes/plugin-router';
-import { statsRouter } from './routes/stats-router';
-import { uploadRouter } from './routes/upload-router';
-
-const HOSTNAME = process.env.HOSTNAME || '127.0.0.1';
-const PORT = Number(process.env.PORT ?? 3000);
-const ENV = process.env.NODE_ENV;
+import { openAiRouter } from './ai/open-ai-router';
+import { booksRouter } from './books/books-router';
+import { appConfig } from './config';
+import { devicesRouter } from './devices/devices-router';
+import { db } from './knex';
+import { kopluginRouter } from './koplugin/koplugin-router';
+import { kosyncRouter } from './kosync/kosync-router';
+import { openLibraryRouter } from './open-library/open-library-router';
+import { statsRouter } from './stats/stats-router';
+import { uploadRouter } from './upload/upload-router';
 
 async function setupServer() {
   const app = express();
@@ -26,29 +21,29 @@ async function setupServer() {
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   app.use(morgan('tiny'));
 
-  if (ENV === 'development') {
+  if (appConfig.env === 'development') {
     // Allow requests from dev build
     app.use(cors({ origin: '*' }));
   }
 
-  // Setup controllers
-  app.use('/', kosyncRouter);
-  app.use('/api', pluginRouter);
-  app.use('/api', booksRouter);
-  app.use('/api', statsRouter);
-  app.use('/api', uploadRouter);
-  app.use('/api', openLibraryRouter);
-  app.use('/api', openAiRouter);
+  app.use('/', kosyncRouter); // Needs to be mounted at root to follow KoSync API
+  app.use('/api/plugin', kopluginRouter);
+  app.use('/api/devices', devicesRouter);
+  app.use('/api/books', booksRouter);
+  app.use('/api/stats', statsRouter);
+  app.use('/api/upload', uploadRouter);
+  app.use('/api/open-library', openLibraryRouter);
+  app.use('/api/ai', openAiRouter);
 
   // Serve react app
-  app.use(express.static(WEB_BUILD_PATH));
+  app.use(express.static(appConfig.webBuildPath));
   app.get('*', (_req: Request, res: Response) => {
-    res.sendFile(path.join(WEB_BUILD_PATH, 'index.html'));
+    res.sendFile(path.join(appConfig.webBuildPath, 'index.html'));
   });
 
   // Start :)
-  const server = app.listen(PORT, HOSTNAME, () => {
-    console.info(`KoInsight back-end is running on http://${HOSTNAME}:${PORT}`);
+  const server = app.listen(appConfig.port, appConfig.hostname, () => {
+    console.info(`KoInsight back-end is running on http://${appConfig.hostname}:${appConfig.port}`);
   });
 
   return server;
@@ -64,7 +59,7 @@ function stopServer(signal: NodeJS.Signals, server: Server) {
 
 async function main() {
   console.log('Running database migrations');
-  await knex.migrate.latest({ directory: path.join(__dirname, 'db', 'migrations') });
+  await db.migrate.latest({ directory: path.join(__dirname, 'db', 'migrations') });
   console.log('Database migrated successfully');
 
   setupServer().then((server) => {

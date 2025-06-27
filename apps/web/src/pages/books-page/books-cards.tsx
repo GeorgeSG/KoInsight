@@ -1,7 +1,7 @@
-import { Book } from '@koinsight/common/types/book';
+import { BookWithData } from '@koinsight/common/types';
 import { Box, Group, Image, Progress, Text, Tooltip } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconBooks, IconProgress, IconUser } from '@tabler/icons-react';
+import { IconBooks, IconEyeClosed, IconProgress, IconUser } from '@tabler/icons-react';
 import C from 'clsx';
 import { JSX } from 'react';
 import { useNavigate } from 'react-router';
@@ -11,7 +11,7 @@ import { getBookPath } from '../../routes';
 import style from './books-cards.module.css';
 
 type BooksCardsProps = {
-  books: Book[];
+  books: BookWithData[];
 };
 
 export function BooksCards({ books }: BooksCardsProps): JSX.Element {
@@ -32,17 +32,23 @@ export function BooksCards({ books }: BooksCardsProps): JSX.Element {
           role="button"
           onClick={() => navigate(getBookPath(book.id))}
         >
+          {book.soft_deleted ? (
+            <Tooltip label="This book is hidden" withArrow>
+              <IconEyeClosed size={16} className={style.BookHiddenIndicator} />
+            </Tooltip>
+          ) : null}
           <Image
             src={`${API_URL}/books/${book.id}/cover`}
             style={{ aspectRatio: '1/1.5' }}
             w={cardWidth}
             alt={book.title}
             fallbackSrc="/book-placeholder-small.png"
+            className={book.soft_deleted ? style.BookHidden : undefined}
           />
           <Progress
             radius={0}
             h={5}
-            value={(book.total_read_pages / book.pages) * 100}
+            value={(book.unique_read_pages / book.total_pages) * 100}
             color="koinsight"
           />
           <Box px="lg" className={C(style.CardDetails, { [style.Small]: isSmallScreen })}>
@@ -70,7 +76,7 @@ export function BooksCards({ books }: BooksCardsProps): JSX.Element {
                   <span className={style.Attribute}>
                     {book.total_read_pages}
                     &nbsp;/&nbsp;
-                    {book.pages} pages read
+                    {book.total_pages} pages read
                   </span>
                 </Group>
               </>

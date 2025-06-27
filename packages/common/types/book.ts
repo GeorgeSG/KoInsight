@@ -1,7 +1,6 @@
-import { Genre } from './genre';
-
-type KoReaderBook = {
+export type KoReaderBook = {
   id: number;
+  md5: string;
   title: string;
   authors: string;
   notes: number;
@@ -10,16 +9,20 @@ type KoReaderBook = {
   pages: number;
   series: string;
   language: string;
-  md5: string;
   total_read_time: number;
   total_read_pages: number;
 };
 
-export type Book = KoReaderBook & {
-  soft_deleted: boolean;
-  reference_pages: number | null;
+export type DbBook = {
+  id: number;
+  md5: string;
+  title: string;
+  authors: string;
+  series: string;
+  language: string;
 };
 
-export type BookWithGenres = Book & {
-  genres: Genre[];
+export type Book = DbBook & {
+  soft_deleted: boolean;
+  reference_pages: number | null;
 };

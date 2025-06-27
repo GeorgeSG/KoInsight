@@ -63,8 +63,9 @@ return function(method, url, headers, body, filepath, quiet)
         end
     else
         if not quiet then
+            logger.err("[KoInsight] callApi: HTTP error", status or code, resp_headers, result)
             UIManager:show(InfoMessage:new{
-                text = _("Communication with server failed.")
+                text = _("Server error" .. (result and ": " .. result['error'] or ""))
             })
         end
 

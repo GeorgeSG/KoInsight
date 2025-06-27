@@ -1,20 +1,35 @@
+import { BookWithData, Device } from '@koinsight/common/types';
 import { Flex, NumberInput, Table } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { endOfDay, formatDate, startOfDay } from 'date-fns';
 import { apply } from 'ramda';
-import { JSX, useState } from 'react';
-import { BookWithStats } from '../../api/use-book-with-stats';
+import { JSX, useMemo, useState } from 'react';
+import { useDevices } from '../../api/devices';
 import { formatSecondsToHumanReadable } from '../../utils/dates';
 
 type BookPageRawProps = {
-  book: BookWithStats;
+  book: BookWithData;
 };
 
 export function BookPageRaw({ book }: BookPageRawProps): JSX.Element {
+  const { data: devices } = useDevices();
+
+  const devicesById = useMemo(
+    () =>
+      devices.reduce(
+        (acc, device) => {
+          acc[device.id] = device;
+          return acc;
+        },
+        {} as Record<string, Device>
+      ),
+    [devices]
+  );
+
   const dates = book.stats.map((stat) => stat.start_time);
   const pages = book.stats.map((stat) => stat.page);
-  const min = dates.length > 0 ? new Date(apply(Math.min, dates) * 1000) : new Date();
-  const max = dates.length > 0 ? new Date(apply(Math.max, dates) * 1000) : new Date();
+  const min = dates.length > 0 ? new Date(apply(Math.min, dates)) : new Date();
+  const max = dates.length > 0 ? new Date(apply(Math.max, dates)) : new Date();
   const maxPage = apply(Math.max, pages);
 
   const [page, setPage] = useState<number | null>(null);
@@ -24,8 +39,8 @@ export function BookPageRaw({ book }: BookPageRawProps): JSX.Element {
   const visibleEvents = book.stats.filter(
     (stat) =>
       (!page || stat.page === page) &&
-      stat.start_time >= startDate.getTime() / 1000 &&
-      stat.start_time <= endDate.getTime() / 1000
+      stat.start_time >= startDate.getTime() &&
+      stat.start_time <= endDate.getTime()
   );
 
   return (
@@ -60,15 +75,17 @@ export function BookPageRaw({ book }: BookPageRawProps): JSX.Element {
             <Table.Th>Start time</Table.Th>
             <Table.Th>Duration</Table.Th>
             <Table.Th>Total pages</Table.Th>
+            <Table.Th>Device</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
           {visibleEvents.map((stat) => (
             <Table.Tr key={stat.start_time}>
               <Table.Td>{stat.page}</Table.Td>
-              <Table.Td>{formatDate(stat.start_time * 1000, 'dd LLL yyyy, HH:mm:ss')}</Table.Td>
+              <Table.Td>{formatDate(stat.start_time, 'dd LLL yyyy, HH:mm:ss')}</Table.Td>
               <Table.Td>{formatSecondsToHumanReadable(stat.duration, false)}</Table.Td>
               <Table.Td>{stat.total_pages}</Table.Td>
+              <Table.Td>{devicesById[stat.device_id]?.model ?? stat.device_id}</Table.Td>
             </Table.Tr>
           ))}
         </Table.Tbody>

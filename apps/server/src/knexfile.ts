@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { DEV_DB_PATH, PROD_DB_PATH } from './const';
+import { appConfig } from './config';
 
 const defaultConfig: Knex.Config = {
   useNullAsDefault: true,
@@ -9,15 +9,21 @@ const defaultConfig: Knex.Config = {
 const config: { [key: string]: Knex.Config } = {
   development: {
     ...defaultConfig,
-    connection: { filename: DEV_DB_PATH },
+    connection: { filename: appConfig.db.dev },
     seeds: { directory: './db/seeds' },
     migrations: { directory: './db/migrations' },
   },
   production: {
     ...defaultConfig,
-    connection: { filename: PROD_DB_PATH },
-    useNullAsDefault: true,
+    connection: { filename: appConfig.db.prod },
     migrations: { directory: './db/migrations' },
+  },
+  test: {
+    ...defaultConfig,
+    connection: { filename: ':memory:' },
+    migrations: {
+      directory: './test/dist/migrations',
+    },
   },
 };
 

@@ -1,17 +1,16 @@
-import { Book } from '@koinsight/common/types/book';
-import { Anchor, Flex, Image, Progress, Stack, Table, Text, Tooltip } from '@mantine/core';
+import { BookWithData } from '@koinsight/common/types';
+import { Anchor, Flex, Image, Progress, Stack, Table, Tooltip } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconHighlight, IconNote } from '@tabler/icons-react';
+import { IconEyeClosed } from '@tabler/icons-react';
 import { JSX } from 'react';
 import { NavLink } from 'react-router';
 import { API_URL } from '../../api/api';
 import { getBookPath } from '../../routes';
 import { formatRelativeDate, getDuration, shortDuration } from '../../utils/dates';
-
 import style from './books-table.module.css';
 
 type BooksTableProps = {
-  books: Book[];
+  books: BookWithData[];
 };
 
 export function BooksTable({ books }: BooksTableProps): JSX.Element {
@@ -35,7 +34,16 @@ export function BooksTable({ books }: BooksTableProps): JSX.Element {
           <Table.Tr key={book.id}>
             <Table.Td>
               <Flex align="center" gap="sm">
-                <Anchor to={getBookPath(book.id)} component={NavLink}>
+                <Anchor
+                  to={getBookPath(book.id)}
+                  component={NavLink}
+                  className={style.BookCoverLink}
+                >
+                  {book.soft_deleted ? (
+                    <Tooltip label="This book is hidden" withArrow>
+                      <IconEyeClosed size={13} className={style.BookHiddenIndicator} />
+                    </Tooltip>
+                  ) : null}
                   <Image
                     src={`${API_URL}/books/${book.id}/cover`}
                     style={{ aspectRatio: '1/1.5' }}
@@ -44,6 +52,7 @@ export function BooksTable({ books }: BooksTableProps): JSX.Element {
                     alt={book.title}
                     fallbackSrc="/book-placeholder-small.png"
                     radius="sm"
+                    className={book.soft_deleted ? style.BookHidden : undefined}
                   />
                 </Anchor>
                 <Stack gap={2} justify="center">
@@ -51,33 +60,34 @@ export function BooksTable({ books }: BooksTableProps): JSX.Element {
                     {book.title}
                   </Anchor>
                   <span className={style.SubTitle}>
-                    {book.authors ?? 'N/A'} · {book.series} ·&nbsp;
-                    <Tooltip label="Highlights" withArrow>
+                    {book.authors ?? 'Unknown author'}
+                    {book.series !== 'N/A' ? ` · ${book.series}` : ''}
+                    {/* <Tooltip label="Highlights" withArrow>
                       <Flex align="center">
                         <IconHighlight size={13} />
-                        &nbsp;{book.highlights}
+                        &nbsp;{book.device_data.reduce((acc, device) => acc + device.highlights, 0)}
                       </Flex>
                     </Tooltip>
                     &nbsp;·&nbsp;
                     <Tooltip label="Notes" withArrow>
                       <Flex align="center">
                         <IconNote size={13} />
-                        &nbsp;{book.notes}
+                        &nbsp;{book.device_data.reduce((acc, device) => acc + device.notes, 0)}
                       </Flex>
-                    </Tooltip>
+                    </Tooltip> */}
                   </span>
                 </Stack>
               </Flex>
             </Table.Td>
             <Table.Td visibleFrom="md">
-              {book.total_read_pages}
+              {book.unique_read_pages}
               <Progress
-                value={(book.total_read_pages / book.pages) * 100}
+                value={(book.unique_read_pages / book.total_pages) * 100}
                 aria-label="Percentage read"
-                aria-valuetext={String((book.total_read_pages / book.pages) * 100)}
+                aria-valuetext={String((book.unique_read_pages / book.total_pages) * 100)}
               />
             </Table.Td>
-            <Table.Td visibleFrom="md">{book.pages}</Table.Td>
+            <Table.Td visibleFrom="md">{book.total_pages}</Table.Td>
             <Table.Td visibleFrom="md">
               {book.total_read_time ? shortDuration(getDuration(book.total_read_time)) : 'N/A'}
             </Table.Td>

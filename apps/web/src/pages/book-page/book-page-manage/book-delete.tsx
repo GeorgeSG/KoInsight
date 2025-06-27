@@ -1,4 +1,4 @@
-import { Book } from '@koinsight/common/types/book';
+import { Book } from '@koinsight/common/types';
 import { Button, Text, Title } from '@mantine/core';
 import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
@@ -24,8 +24,8 @@ export function BookDelete({ book }: BookDeleteProps) {
       centered: true,
       children: (
         <Text size="sm">
-          Are you sure you want to delete {book ? `"${book?.title}"` : 'this book'}? This action is
-          destructive and cannot be reverted.
+          Are you sure you want to delete <strong>{book ? `"${book?.title}"` : 'this book'}</strong>
+          ? This action is destructive and cannot be reverted.
         </Text>
       ),
       labels: { confirm: 'Delete', cancel: "No, don't delete it" },

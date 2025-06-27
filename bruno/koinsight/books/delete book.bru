@@ -1,0 +1,15 @@
+meta {
+  name: delete book
+  type: http
+  seq: 4
+}
+
+delete {
+  url: http://{{host}}:{{port}}/api/books/{{book_id}}/
+  body: json
+  auth: inherit
+}
+
+params:query {
+  ~: 
+}

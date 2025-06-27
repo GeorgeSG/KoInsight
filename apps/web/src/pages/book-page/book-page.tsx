@@ -14,7 +14,7 @@ import { IconCalendar, IconPhoto, IconSettings, IconTable } from '@tabler/icons-
 import { sum } from 'ramda';
 import { JSX } from 'react';
 import { useParams } from 'react-router';
-import { useBookWithStats } from '../../api/use-book-with-stats';
+import { useBookWithData } from '../../api/use-book-with-data';
 import { formatSecondsToHumanReadable } from '../../utils/dates';
 import { BookCard } from './book-card';
 import { BookPageCalendar } from './book-page-calendar';
@@ -24,9 +24,14 @@ import { BookPageRaw } from './book-page-raw';
 
 export function BookPage(): JSX.Element {
   const { id } = useParams() as { id: string };
-  const { data: book, isLoading } = useBookWithStats(Number(id));
+  const { data: book, isLoading } = useBookWithData(Number(id));
 
   const avgPerDay = book ? book.total_read_time / Object.keys(book.read_per_day).length : 0;
+
+  const bookPages =
+    book?.reference_pages ||
+    book?.device_data.reduce((acc, device) => Math.max(acc, device.pages), 0) ||
+    0;
 
   if (isLoading || !book) {
     return (
@@ -49,12 +54,12 @@ export function BookPage(): JSX.Element {
               <RingProgress
                 label={
                   <Text size="xs" ta="center">
-                    {book.total_read_pages} / {book.pages}
+                    {book.unique_read_pages} / {bookPages}
                   </Text>
                 }
                 sections={[
                   {
-                    value: (book.total_read_pages / book.pages) * 100,
+                    value: (book.unique_read_pages / bookPages) * 100,
                     color: 'koinsight',
                   },
                 ]}
@@ -66,7 +71,7 @@ export function BookPage(): JSX.Element {
               <Text>Average time per day: {formatSecondsToHumanReadable(avgPerDay)}</Text>
               <Text>Days reading: {Object.keys(book.read_per_day).length}</Text>
               <Text>
-                Average time per page:{' '}
+                Average time per page flip:{' '}
                 {Math.round(sum(book.stats.map((p) => p.duration)) / book.stats.length)}s
               </Text>
             </Stack>

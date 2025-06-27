@@ -1,0 +1,11 @@
+meta {
+  name: get book stats
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://{{host}}:{{port}}/api/stats/{{book_md5}}
+  body: none
+  auth: inherit
+}

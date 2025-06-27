@@ -4,3 +4,20 @@
   color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-1));
   font-size: var(--mantine-font-size-sm);
 }
+
+.BookCoverLink {
+  position: relative;
+}
+
+.BookHidden {
+  filter: grayscale(100%);
+  filter: brightness(0.3);
+}
+
+.BookHiddenIndicator {
+  position: absolute;
+  z-index: 10;
+  top: 2px;
+  left: 2px;
+  color: var(--mantine-color-koinsight-light-color);
+}

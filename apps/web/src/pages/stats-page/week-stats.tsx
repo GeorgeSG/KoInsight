@@ -1,3 +1,5 @@
+import { Book } from '@koinsight/common/types/book';
+import { PageStat } from '@koinsight/common/types/page-stat';
 import { AreaChart } from '@mantine/charts';
 import { Flex, Popover, Text, useComputedColorScheme, useMantineTheme } from '@mantine/core';
 import { DatePicker } from '@mantine/dates';
@@ -9,50 +11,58 @@ import {
 } from '@tabler/icons-react';
 import {
   addDays,
+  differenceInCalendarDays,
+  endOfDay,
   endOfWeek,
   format,
   formatDate,
+  getDay,
   isBefore,
   isSameDay,
   startOfDay,
   startOfWeek,
 } from 'date-fns';
-import { groupBy, sum, uniqBy } from 'ramda';
+import { groupBy, sum } from 'ramda';
 import { useMemo, useState } from 'react';
-import { PageStat } from '../../api/use-page-stats';
 import { Statistics } from '../../components/statistics/statistics';
 import { formatSecondsToHumanReadable } from '../../utils/dates';
-import { Book } from '@koinsight/common/types/book';
 
 export function WeekStats({
   stats,
-  booksById,
+  booksByMd5,
 }: {
   stats: PageStat[];
-  booksById: Record<number, Book>;
+  booksByMd5: Record<string, Book>;
 }) {
-  const [weekStart, setWeekStart] = useState<number>(
-    startOfWeek(new Date(), { weekStartsOn: 1 }).getTime()
-  );
-  const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
-
   const colorScheme = useComputedColorScheme();
   const { colors } = useMantineTheme();
 
+  const [weekStart, setWeekStart] = useState<number>(
+    startOfWeek(new Date(), { weekStartsOn: 1 }).getTime()
+  );
+
+  const weekEnd = useMemo(() => {
+    const rawWeekEnd = endOfWeek(weekStart, { weekStartsOn: 1 }).getTime();
+    const today = endOfDay(new Date()).getTime();
+    return rawWeekEnd <= today ? rawWeekEnd : today;
+  }, [weekStart]);
+
   const weekData = useMemo(() => {
-    const start = startOfWeek(weekStart, { weekStartsOn: 1 });
-    return stats?.filter(
-      ({ start_time }) =>
-        start_time * 1000 < weekEnd.getTime() && start_time * 1000 > start.getTime()
-    );
+    const start = startOfWeek(weekStart, { weekStartsOn: 1 }).getTime();
+    return stats?.filter(({ start_time }) => start_time < weekEnd && start_time > start);
   }, [stats, weekStart, weekEnd]);
+
+  const weekDaysPassed = useMemo(
+    () => differenceInCalendarDays(weekEnd, weekStart) + 1,
+    [weekStart, weekEnd]
+  );
 
   const pagesRead = useMemo(
     () =>
       Math.round(
         weekData?.reduce((acc, stat) => {
-          if (stat.total_pages && booksById[stat.book_id]?.reference_pages) {
-            return acc + (1 / stat.total_pages) * booksById[stat.book_id].reference_pages!;
+          if (stat.total_pages && booksByMd5[stat.book_md5]?.reference_pages) {
+            return acc + (1 / stat.total_pages) * booksByMd5[stat.book_md5].reference_pages!;
           } else {
             return acc + 1;
           }
@@ -63,16 +73,14 @@ export function WeekStats({
 
   const avgPagesPerDay = useMemo(() => {
     const statsPerDay = groupBy((stat: PageStat) =>
-      startOfDay(stat.start_time * 1000)
-        .getTime()
-        .toString()
+      startOfDay(stat.start_time).getTime().toString()
     )(weekData ?? []);
 
     const pagesPerDay = Object.values(statsPerDay).map(
       (dayStats) =>
         dayStats?.reduce((acc, stat) => {
-          if (stat.total_pages && booksById[stat.book_id]?.reference_pages) {
-            return acc + (1 / stat.total_pages) * booksById[stat.book_id].reference_pages!;
+          if (stat.total_pages && booksByMd5[stat.book_md5]?.reference_pages) {
+            return acc + (1 / stat.total_pages) * booksByMd5[stat.book_md5].reference_pages!;
           } else {
             return acc + 1;
           }
@@ -87,7 +95,7 @@ export function WeekStats({
 
     let day = weekStart;
     while (isBefore(day, weekEnd)) {
-      const dayStats = stats?.filter((stat) => isSameDay(stat.start_time * 1000, day)) ?? [];
+      const dayStats = stats?.filter((stat) => isSameDay(stat.start_time, day)) ?? [];
 
       perDayResult.push({
         day: format(day, 'dd MMM yyyy'),
@@ -114,7 +122,7 @@ export function WeekStats({
         <Popover.Dropdown>
           <DatePicker
             value={new Date(weekStart)}
-            maxDate={endOfWeek(new Date())}
+            maxDate={endOfWeek(new Date(), { weekStartsOn: 1 })}
             onChange={(date) =>
               date && setWeekStart(startOfWeek(date, { weekStartsOn: 1 }).getTime())
             }
@@ -141,7 +149,7 @@ export function WeekStats({
           {
             label: 'Average time per day',
             value: formatSecondsToHumanReadable(
-              Math.round(sum(weekData?.map((stat) => stat.duration) ?? []) / 7)
+              Math.round(sum(weekData?.map((stat) => stat.duration) ?? []) / weekDaysPassed)
             ),
             icon: IconClock,
           },

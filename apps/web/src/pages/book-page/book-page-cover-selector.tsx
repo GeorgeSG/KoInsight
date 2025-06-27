@@ -1,11 +1,11 @@
 import { Book } from '@koinsight/common/types/book';
-import { Box, Button, Flex, Image, Loader, LoadingOverlay, Skeleton, Tooltip } from '@mantine/core';
+import { ActionIcon, Box, Button, Flex, Image, Skeleton, TextInput, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { JSX, useState } from 'react';
+import { JSX, useEffect, useState } from 'react';
 import { listCovers, saveCover } from '../../api/open-library';
 
-import style from './book-page-cover-selector.module.css';
 import { IconSearch } from '@tabler/icons-react';
+import style from './book-page-cover-selector.module.css';
 
 type BookPageCoverSelectorProps = {
   book: Book;
@@ -14,14 +14,25 @@ type BookPageCoverSelectorProps = {
 export function BookPageCoverSelector({ book }: BookPageCoverSelectorProps): JSX.Element {
   const [state, setState] = useState<{
     data: string[] | null;
+    query: string | null;
     isLoading: boolean;
     loadedCovers: string[];
     isSavingCovers: boolean;
-  }>({ data: null, isLoading: false, loadedCovers: [], isSavingCovers: false });
+  }>({ data: null, query: book.title, isLoading: false, loadedCovers: [], isSavingCovers: false });
+
+  useEffect(() => {
+    setState((prev) => ({ ...prev, query: book.title }));
+  }, [book]);
 
   const onSearch = async () => {
-    setState({ isLoading: true, data: null, loadedCovers: [], isSavingCovers: false });
-    const coverIds = await listCovers(book.title);
+    setState((prev) => ({
+      isLoading: true,
+      query: prev.query || book.title,
+      data: null,
+      loadedCovers: [],
+      isSavingCovers: false,
+    }));
+    const coverIds = await listCovers(state.query || book.title);
     setState((prev) => ({ ...prev, isLoading: false, data: coverIds }));
   };
 
@@ -48,14 +59,25 @@ export function BookPageCoverSelector({ book }: BookPageCoverSelectorProps): JSX
 
   return (
     <>
-      <Button
-        onClick={onSearch}
-        loading={state.isLoading}
-        color="violet"
-        leftSection={<IconSearch size={16} />}
-      >
-        Search Covers
-      </Button>
+      <Flex mt="lg" gap="sm" direction="row">
+        <TextInput
+          placeholder="Search query..."
+          w={300}
+          color="violet"
+          value={state.query || ''}
+          onKeyUp={(e) => (e.code === 'Enter' ? onSearch() : null)}
+          onChange={(e) => setState((prev) => ({ ...prev, query: e.target.value }))}
+        />
+        <Button
+          color="violet"
+          variant="filled"
+          onClick={onSearch}
+          leftSection={<IconSearch size={16} />}
+          loading={state.isLoading}
+        >
+          Search
+        </Button>
+      </Flex>
       <Flex mt="lg" gap={16} direction="row" wrap="wrap">
         {state.data?.map((coverId) => (
           <Box

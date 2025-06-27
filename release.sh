@@ -2,6 +2,13 @@
 
 set -e
 
+BUMP_TYPE=${1:-patch}
+if [[ ! "$BUMP_TYPE" =~ ^(patch|minor|major|prerelease)$ ]]; then
+  echo "Invalid version bump type: $BUMP_TYPE"
+  echo "Valid types: patch, minor, major, prerelease"
+  exit 1
+fi
+
 # === Config ===
 GHCR_USER="georgesg"
 REPO_NAME="koinsight"
@@ -9,7 +16,7 @@ PACKAGE_DIRS=("apps/server" "apps/web" "packages/common")
 IMAGE_NAME="ghcr.io/$GHCR_USER/$REPO_NAME"
 
 # === Bump version using changesets or npm version ===
-VERSION=$(npm version patch --no-git-tag-version)
+VERSION=$(npm version "$BUMP_TYPE" --no-git-tag-version)
 
 # === Apply version to each package.json ===
 for DIR in "${PACKAGE_DIRS[@]}"; do

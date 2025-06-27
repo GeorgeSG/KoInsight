@@ -42,3 +42,16 @@
   font-size: var(--mantine-font-size-xs);
   color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-gray-6));
 }
+
+.BookHiddenIndicator {
+  position: absolute;
+  z-index: 10;
+  top: 8px;
+  left: 8px;
+  color: var(--mantine-color-koinsight-light-color);
+}
+
+.BookHidden {
+  filter: grayscale(100%);
+  filter: brightness(0.3);
+}

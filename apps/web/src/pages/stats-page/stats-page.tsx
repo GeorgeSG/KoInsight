@@ -1,3 +1,4 @@
+import { Book } from '@koinsight/common/types/book';
 import { BarChart } from '@mantine/charts';
 import {
   Box,
@@ -9,135 +10,46 @@ import {
   useMantineTheme,
 } from '@mantine/core';
 import { IconClock, IconMaximize, IconPageBreak } from '@tabler/icons-react';
-import { format, startOfDay, subDays } from 'date-fns';
-import { groupBy, max, sum } from 'ramda';
 import { JSX, useMemo } from 'react';
 import { BarProps } from 'recharts';
 import { useBooks } from '../../api/books';
-import { PageStat, usePageStats } from '../../api/use-page-stats';
+import { usePageStats } from '../../api/use-page-stats';
 import { CustomBar } from '../../components/charts/custom-bar';
 import { ReadingCalendar } from '../../components/statistics/reading-calendar';
 import { Statistics } from '../../components/statistics/statistics';
 import { formatSecondsToHumanReadable } from '../../utils/dates';
 import { WeekStats } from './week-stats';
-import { Book } from '@koinsight/common/types/book';
 
 export function StatsPage(): JSX.Element {
   const colorScheme = useComputedColorScheme();
   const { colors } = useMantineTheme();
-  const { data: books, isLoading } = useBooks();
-  const { data: stats, isLoading: statsLoading } = usePageStats();
+  const { data: books, isLoading: booksLoading } = useBooks();
 
-  const booksById = useMemo(() => {
+  const {
+    data: {
+      stats,
+      perMonth,
+      perDayOfTheWeek,
+      mostPagesInADay,
+      totalReadingTime,
+      longestDay,
+      last7DaysReadTime,
+      totalPagesRead,
+    },
+    isLoading: statsLoading,
+  } = usePageStats();
+
+  const booksByMd5 = useMemo(() => {
     return books?.reduce(
       (acc, book) => {
-        acc[book.id] = book;
+        acc[book.md5] = book;
         return acc;
       },
-      {} as Record<number, Book>
+      {} as Record<string, Book>
     );
   }, [books]);
 
-  const lastWeek = useMemo(() => {
-    const now = subDays(new Date(), 7);
-    return stats.filter((stat) => stat.start_time * 1000 > now.getTime());
-  }, [stats]);
-
-  const weeklyReadTime = useMemo(
-    () => sum(lastWeek?.map((stat) => stat.duration) ?? []),
-    [lastWeek]
-  );
-
-  const perMonth = useMemo(
-    () =>
-      (stats ?? [])
-        .reduce<{ month: string; duration: number; date: number }[]>((acc, stat) => {
-          const month = format(stat.start_time * 1000, 'MMMM yyyy');
-          const monthData = acc.find((item) => item.month === month);
-          if (monthData) {
-            monthData.duration += stat.duration;
-          } else {
-            acc.push({ month, duration: stat.duration, date: stat.start_time });
-          }
-
-          return acc;
-        }, [])
-        .sort((a, b) => a.date - b.date),
-    [stats]
-  );
-
-  const longestDay = useMemo(() => {
-    const timePerDay = stats.reduce<Record<number, number>>((acc, stat) => {
-      const day = startOfDay(stat.start_time * 1000).getTime();
-      acc[day] = (acc[day] || 0) + stat.duration;
-      return acc;
-    }, {});
-
-    const maxTime = Math.max(...Object.values(timePerDay ?? []));
-    return maxTime;
-  }, [stats]);
-
-  const pagesPerDay = useMemo(() => {
-    const statsPerDay = groupBy((stat: PageStat) =>
-      startOfDay(stat.start_time * 1000)
-        .getTime()
-        .toString()
-    )(stats);
-
-    const pagesPerDay = Object.values(statsPerDay).map(
-      (dayStats) =>
-        dayStats?.reduce((acc, stat) => {
-          if (stat.total_pages && booksById[stat.book_id]?.reference_pages) {
-            return acc + (1 / stat.total_pages) * booksById[stat.book_id].reference_pages!;
-          } else {
-            return acc + 1;
-          }
-        }, 0) ?? 0
-    );
-
-    return pagesPerDay;
-  }, [stats, booksById]);
-
-  const mostPagesInADay = useMemo(() => Math.max(...pagesPerDay), [pagesPerDay]);
-
-  const totalTime = useMemo(() => sum((stats ?? []).map((s) => s.duration)), [stats]);
-
-  const perWeekDay = useMemo(
-    () =>
-      stats
-        .reduce(
-          (acc, stat) => {
-            const day = format(stat.start_time * 1000, 'EEEE');
-            const existingDay = acc.find((d) => d.name === day);
-            if (existingDay) {
-              existingDay.value += stat.duration;
-            } else {
-              acc.push({
-                name: day,
-                value: stat.duration,
-                day: new Date(stat.start_time * 1000).getUTCDay(),
-                index: 1,
-              });
-            }
-            return acc;
-          },
-          [] as Array<{ name: string; value: number; day: number; index: number }>
-        )
-        .sort((a, b) => a.day - b.day),
-    [stats]
-  );
-
-  const totalPagesRead = useMemo(() => {
-    return books.reduce(
-      (acc, book) =>
-        book.reference_pages && book.reference_pages > 0
-          ? acc + Math.round((book.total_read_pages / book.pages) * book.reference_pages)
-          : acc + book.total_read_pages,
-      0
-    );
-  }, [books]);
-
-  if (isLoading || statsLoading || !books || !stats) {
+  if (booksLoading || statsLoading) {
     return (
       <Flex justify="center" align="center" h="100%">
         <Loader />
@@ -160,8 +72,8 @@ export function StatsPage(): JSX.Element {
         }}
         fw={900}
       >
-        {weeklyReadTime > 0 ? (
-          <>You read for {formatSecondsToHumanReadable(weeklyReadTime)} this week. Keep it up!</>
+        {last7DaysReadTime > 0 ? (
+          <>You read for {formatSecondsToHumanReadable(last7DaysReadTime)} this week. Keep it up!</>
         ) : (
           <>You haven't read this week yet. No better time to start!</>
         )}
@@ -171,7 +83,7 @@ export function StatsPage(): JSX.Element {
           data={[
             {
               label: 'Total read time',
-              value: formatSecondsToHumanReadable(totalTime),
+              value: formatSecondsToHumanReadable(totalReadingTime),
               icon: IconClock,
             },
             {
@@ -186,7 +98,7 @@ export function StatsPage(): JSX.Element {
             },
             {
               label: 'Most pages in a day',
-              value: mostPagesInADay,
+              value: mostPagesInADay ?? 'N/A',
               icon: IconMaximize,
             },
           ]}
@@ -201,13 +113,13 @@ export function StatsPage(): JSX.Element {
       <Title mt="xl" mb={4} order={3}>
         Weekly stats
       </Title>
-      <WeekStats stats={stats} booksById={booksById} />
+      <WeekStats stats={stats} booksByMd5={booksByMd5} />
       <Title mt="xl" order={3}>
         Per day of the week
       </Title>
       <BarChart
         h={300}
-        data={perWeekDay}
+        data={perDayOfTheWeek}
         dataKey="name"
         series={[
           {

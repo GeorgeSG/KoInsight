@@ -1,0 +1,11 @@
+meta {
+  name: get all devices
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://{{host}}:{{port}}/api/devices
+  body: none
+  auth: inherit
+}

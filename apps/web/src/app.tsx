@@ -4,14 +4,16 @@ import {
   Burger,
   createTheme,
   Drawer,
+  Flex,
   Group,
   MantineProvider,
+  Stack,
   Text,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
-import { IconHeart } from '@tabler/icons-react';
+import { IconError404, IconHeart } from '@tabler/icons-react';
 import { JSX } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import style from './app.module.css';
@@ -46,7 +48,7 @@ const theme = createTheme({
 
 export function App(): JSX.Element {
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
-
+  const version = __APP_VERSION__;
   return (
     <MantineProvider theme={theme} defaultColorScheme="light">
       <ModalsProvider>
@@ -70,6 +72,15 @@ export function App(): JSX.Element {
               <Route path={RoutePath.CALENDAR} element={<CalendarPage />} />
               <Route path={RoutePath.STATS} element={<StatsPage />} />
               <Route path={RoutePath.SYNCS} element={<SyncsPage />} />
+              {/* Catch-all route goes last */}
+              <Route
+                path="*"
+                element={
+                  <Stack align="center" justify="center" style={{ height: '100%' }}>
+                    <IconError404 size={144} /> Page not found 😢
+                  </Stack>
+                }
+              />
             </Routes>
           </main>
         </div>
@@ -78,7 +89,7 @@ export function App(): JSX.Element {
           <Anchor href="https://gar.dev" target="_blank">
             gar.dev
           </Anchor>
-          .
+          . {version}
         </Text>
       </ModalsProvider>
     </MantineProvider>

@@ -7,7 +7,7 @@ export function saveCover(bookId: Book['id'], coverId: string) {
     coverId,
   });
 
-  return fetchFromAPI(`cover?${params}`);
+  return fetchFromAPI(`open-library/cover?${params}`);
 }
 
 export function listCovers(searchTerm: string, limit: number = 3) {
@@ -16,5 +16,5 @@ export function listCovers(searchTerm: string, limit: number = 3) {
     limit: String(limit),
   });
 
-  return fetchFromAPI<string[]>(`list-covers?${params.toString()}`);
+  return fetchFromAPI<string[]>(`open-library/list-covers?${params.toString()}`);
 }

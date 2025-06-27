@@ -6,11 +6,13 @@ import { formatSecondsToHumanReadable } from '../../utils/dates';
 import { DayData, DotTrail } from '../dot-trail/dot-trail';
 
 export function ReadingCalendar(): JSX.Element {
-  const { data: stats } = usePageStats();
+  const {
+    data: { stats },
+  } = usePageStats();
 
   const percentPerDay: Record<number, DayData> = useMemo(() => {
-    const timePerDay = stats?.reduce<Record<number, number>>((acc, stat) => {
-      const day = startOfDay(stat.start_time * 1000).getTime();
+    const timePerDay = stats.reduce<Record<number, number>>((acc, stat) => {
+      const day = startOfDay(stat.start_time).getTime();
       acc[day] = (acc[day] || 0) + stat.duration;
       return acc;
     }, {});

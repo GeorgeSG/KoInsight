@@ -1,11 +1,11 @@
 meta {
   name: set reference pages
   type: http
-  seq: 6
+  seq: 5
 }
 
 put {
-  url: http://{{host}}:{{port}}/api/books/1/reference_pages
+  url: http://{{host}}:{{port}}/api/books/{{book_id}}/reference_pages
   body: json
   auth: inherit
 }

@@ -1,22 +1,15 @@
-import { Flex, Group, Image, Text, Title, Tooltip } from '@mantine/core';
+import { BookWithData } from '@koinsight/common/types';
+import { Flex, Group, Image, Title, Tooltip } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import {
-  IconBooks,
-  IconCalendar,
-  IconHighlight,
-  IconNote,
-  IconProgress,
-  IconUser,
-} from '@tabler/icons-react';
+import { IconBooks, IconCalendar, IconHighlight, IconNote, IconUser } from '@tabler/icons-react';
 import { JSX } from 'react';
 import { API_URL } from '../../api/api';
-import { BookWithStats } from '../../api/use-book-with-stats';
 import { formatRelativeDate } from '../../utils/dates';
 
 import style from './book-card.module.css';
 
 type BookCardProps = {
-  book: BookWithStats;
+  book: BookWithData;
 };
 
 export function BookCard({ book }: BookCardProps): JSX.Element {
@@ -60,14 +53,18 @@ export function BookCard({ book }: BookCardProps): JSX.Element {
             <Tooltip label="Highlights" position="top" withArrow>
               <IconHighlight stroke={1.5} size={16} />
             </Tooltip>
-            <span className={style.InfoText}>{book.highlights}</span>
+            <span className={style.InfoText}>
+              {book.device_data.reduce((acc, device) => acc + device.highlights, 0)}
+            </span>
           </Flex>
 
           <Flex align="center" gap={8} mt={5}>
             <Tooltip label="Notes" position="top" withArrow>
               <IconNote stroke={1.5} size={16} />
             </Tooltip>
-            <span className={style.InfoText}>{book.notes}</span>
+            <span className={style.InfoText}>
+              {book.device_data.reduce((acc, device) => acc + device.notes, 0)}
+            </span>
           </Flex>
         </Group>
       </div>

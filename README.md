@@ -6,7 +6,11 @@
 </p>
 
 <p align="center">
-<strong>KoInsight</strong> brings your <a href="https://koreader.rocks" target="_blank">KOReader</a> reading stats to life with a clean, web-based dashboard.
+  <strong>KoInsight</strong> brings your <a href="https://koreader.rocks" target="_blank">KOReader</a> reading stats to life with a clean, web-based dashboard.
+</p>
+
+<p align="center">
+  <a href='https://coveralls.io/github/GeorgeSG/KoInsight'><img src='https://coveralls.io/repos/github/GeorgeSG/KoInsight/badge.svg' alt='Coverage Status' /></a>
 </p>
 
 <p align="center">
@@ -16,12 +20,11 @@
   </picture>
 </p>
 
-<h2>⚠️ WARNING! KoInsight is not currently suited for multi-device sync. If you sync data from multiple devices, statistics will most likely be wrong. I am working on a next version that will have full support for multiple devices.</h2>
-
 # Features
 
 - 📈 Interactive dashboard with charts and insights
 - 🔄 KOReader plugin for syncing reading stats
+- 📱 Multi-device support
 - 📤 Manual .sqlite upload supported
 - ♻️ Act as a KOReader (kosync) sync server
 - 🏠 Fully self-hostable (Docker image available)
@@ -127,26 +130,4 @@ The progress sync data should appear in the **"Progress syncs"** page in KoInsig
 # Roadmap
 (a.k.a things I want to do)
 
-1. **Books**
-    1. Mark as read
-    1. Mark as unread
-    1. Edit / add details manually
-    1. ~~Manual cover upload~~
-    1. Automatically fetch book cover on new book upload
-1.  **Authors**
-    1. Author view - show books per author.
-1. **Statistics**
-    1. Map KOReader page count to actual page count for better per-page statistics.
-1. **More KOReader data**
-    1. Import covers from KOReader
-    1. Try to import highlights and bookmarks from KOReader
-1. **AI Enhancements**
-    1. Get book information - description, similar books
-    1. Tag / Categorize books based on genres
-    1. Book recommendations?
-1. **Administration**
-    1. Multi-user support (besides progress syncs)
-1. **Progress sync**
-    1. Delete progress syncs
-    1. Edit progress syncs
-    1. Device management
+See [Project board](https://github.com/users/GeorgeSG/projects/2)

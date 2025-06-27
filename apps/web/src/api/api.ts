@@ -4,11 +4,22 @@ export const SERVER_URL = `${import.meta.env.VITE_WEB_API_URL ?? ''}`;
 export async function fetchFromAPI<T>(
   endpoint: string,
   method: string = 'GET',
-  body: unknown | null = null
+  body: Record<string, unknown> | null = null
 ) {
-  const response = await fetch(`${API_URL}/${endpoint}`, {
+  let searchParams: string = '';
+
+  if (method === 'GET' && body) {
+    let tempSearchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(body)) {
+      tempSearchParams.set(key, String(value));
+    }
+
+    searchParams = `?${tempSearchParams.toString()}`;
+  }
+
+  const response = await fetch(`${API_URL}/${endpoint}${searchParams}`, {
     method,
-    body: body ? JSON.stringify(body) : null,
+    body: method !== 'GET' && body ? JSON.stringify(body) : null,
     headers: { 'Content-Type': 'application/json' },
   });
 

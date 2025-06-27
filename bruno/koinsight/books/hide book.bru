@@ -1,0 +1,21 @@
+meta {
+  name: hide book
+  type: http
+  seq: 6
+}
+
+put {
+  url: http://{{host}}:{{port}}/api/books/{{book_id}}/hide
+  body: json
+  auth: inherit
+}
+
+params:query {
+  ~: 
+}
+
+body:json {
+  { 
+    "hidden": true
+  }
+}

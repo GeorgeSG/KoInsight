@@ -13,7 +13,7 @@
 }
 
 .Main {
-  padding: var(--mantine-spacing-xl);
+  padding: 4px var(--mantine-spacing-xl);
   overflow-y: auto;
   flex-grow: 1;
 }
