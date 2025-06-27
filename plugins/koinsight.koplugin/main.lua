@@ -17,6 +17,7 @@ local koinsight = WidgetContainer:extend{
 function koinsight:init()
     self.ui.menu:registerToMainMenu(self)
     self.koinsight_settings = KoInsightSettings:new{}
+    self:initMenuOrder()
 end
 
 function koinsight:addToMainMenu(menu_items)
@@ -48,6 +49,28 @@ function koinsight:addToMainMenu(menu_items)
             end
         }}
     }
+end
+
+function koinsight:initMenuOrder()
+    local menu_order_modules = {
+        "ui/elements/filemanager_menu_order",
+        "ui/elements/reader_menu_order",
+    }
+
+    for _, module_name in ipairs(menu_order_modules) do
+        local success, menu_order = pcall(require, module_name)
+        if success and menu_order and menu_order.tools then
+            local pos = 1
+            for i, val in ipairs(menu_order.tools) do
+                if val == "statistics" then
+                    pos = i + 1
+                    break
+                end
+            end
+            table.insert(menu_order.tools, pos, "koinsight")
+            logger.info("[KoInsight] Added to menu order using module: " .. module_name)
+        end
+    end
 end
 
 return koinsight
