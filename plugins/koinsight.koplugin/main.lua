@@ -56,7 +56,7 @@ function koinsight:onDispatcherRegisterActions()
     Dispatcher:registerAction(
         "koinsight_sync",
         {
-            category = "network",
+            category = "none",
             event    = "KoInsightSync",
             title    = _("KoInsight: Sync stats"),
             general  = true
