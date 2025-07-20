@@ -8,6 +8,7 @@ local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local KoInsightSettings = require("settings")
 local KoInsightDbReader = require("db_reader")
 local JSON = require("json")
+local NetworkMgr = require("ui/network/manager")
 
 local koinsight = WidgetContainer:extend({
   name = "koinsight",
@@ -38,7 +39,9 @@ function koinsight:addToMainMenu(menu_items)
         text = _("Synchronize data"),
         separator = true,
         callback = function()
-          onUpload(self.koinsight_settings.server_url)
+          NetworkMgr:runWhenOnline(function()
+            onUpload(self.koinsight_settings.server_url)
+          end)
         end,
       },
       {
@@ -68,7 +71,9 @@ function koinsight:onDispatcherRegisterActions()
 end
 
 function koinsight:onKoInsightSync()
-  onUpload(self.koinsight_settings.server_url)
+  NetworkMgr:runWhenOnline(function()
+    onUpload(self.koinsight_settings.server_url)
+  end)
 end
 
 function koinsight:initMenuOrder()
