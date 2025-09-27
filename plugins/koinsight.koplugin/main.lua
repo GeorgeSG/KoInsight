@@ -133,11 +133,15 @@ function koinsight:performSyncOnSuspend()
   
   -- Perform sync in a protected call to avoid crashing on suspend
   local success, error_msg = pcall(function()
-    onUpload(self.koinsight_settings.server_url)
+    onUpload(self.koinsight_settings.server_url, true) -- true = silent mode
   end)
   
   if not success then
-    logger.err("[KoInsight] Error during suspend sync: " .. tostring(error_msg))
+    message = "Error during auto sync: " .. tostring(error_msg)
+    logger.err("[KoInsight] " .. message)
+    UIManager:show(InfoMessage:new({
+      text = _(message),
+    }))
   else
     logger.info("[KoInsight] Suspend sync completed successfully")
   end

@@ -31,7 +31,7 @@ function render_response_message(response, prefix, default_text)
   }))
 end
 
-function send_device_data(server_url)
+function send_device_data(server_url, silent)
   local url = server_url .. API_DEVICE_LOCATION
   local body = {
     id = G_reader_settings:readSetting("device_id"),
@@ -42,12 +42,12 @@ function send_device_data(server_url)
 
   local ok, response = callApi("POST", url, get_headers(body), body)
 
-  if ok ~= true then
+  if ok ~= true and not silent then
     render_response_message(response, "Error:", "Unable to register device.")
   end
 end
 
-function send_statistics_data(server_url)
+function send_statistics_data(server_url, silent)
   local url = server_url .. API_UPLOAD_LOCATION
 
   local body = {
@@ -60,14 +60,19 @@ function send_statistics_data(server_url)
 
   local ok, response = callApi("POST", url, get_headers(body), body)
 
-  if ok then
-    render_response_message(response, "Success:", "Data uploaded.")
-  else
-    render_response_message(response, "Error:", "Data upload failed.")
+  if not silent then
+    if ok then
+      render_response_message(response, "Success:", "Data uploaded.")
+    else
+      render_response_message(response, "Error:", "Data upload failed.")
+    end
   end
 end
 
-return function(server_url)
+return function(server_url, silent)
+  if silent == nil then
+    silent = false
+  end
   if server_url == nil or server_url == "" then
     UIManager:show(InfoMessage:new({
       text = _("Please configure the server URL first."),
@@ -75,6 +80,6 @@ return function(server_url)
     return
   end
 
-  send_device_data(server_url)
-  send_statistics_data(server_url)
+  send_device_data(server_url, silent)
+  send_statistics_data(server_url, silent)
 end
