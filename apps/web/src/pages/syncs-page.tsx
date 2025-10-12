@@ -99,8 +99,8 @@ export function SyncsPage() {
                         <Tooltip withArrow label="Percentage">
                           <IconPercentage size={18} />
                         </Tooltip>
-                        <Progress w="100" value={progress.percentage * 100} />{' '}
-                        {progress.percentage * 100}%
+                        <Progress w="100" value={(progress.percentage * 100).toFixed(2)} />{' '}
+                        {(progress.percentage * 100).toFixed(2)}%
                       </Flex>
                     </Flex>
                   </Card>
