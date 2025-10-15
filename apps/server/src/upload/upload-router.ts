@@ -22,7 +22,7 @@ const upload = multer({
       cb(new Error('Only .sqlite3 files are allowed'));
     }
   },
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: appConfig.upload.maxFileSizeMegaBytes * 1024 * 1024 },
 });
 
 const router = Router();
@@ -57,6 +57,16 @@ router.post('/', upload.single('file'), async (req, res, next) => {
     db.close();
     unlinkSync(uploadedFilePath);
   }
+});
+
+router.use((err: any, req: any, res: any, next: any) => {
+  if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+    const maxMb = Math.round(appConfig.upload.maxFileSizeMegaBytes);
+    return res
+      .status(413)
+      .json({ error: `File too large. Maximum file size allowed is ${maxMb} MB.` });
+  }
+  return next(err);
 });
 
 export { router as uploadRouter };

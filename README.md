@@ -117,6 +117,23 @@ Reload the KoInsight web dashboard. If everything went well (🤞), your data sh
 
 Every time you need to reupload data, you would need to upload the statistics database file again.
 
+⚠️ By default the maximum upload size is 10 MB! This can be configured via a environment variable `MAX_FILE_SIZE_MB` in the `compose.yaml` file.
+
+Example:
+```yaml
+name: koinsight
+services:
+  koinsight:
+    image: ghcr.io/georgesg/koinsight:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - MAX_FILE_SIZE_MB=50
+```
+
 ## Use as progress sync server
 
 You can use your KoInsight instance as a KOReader sync server. This allows you to sync your reading progress across multiple devices.

@@ -36,6 +36,10 @@ export function UploadForm(): JSX.Element {
         });
         setMessage('');
         close();
+      }
+      else if (response.status === 413) {
+        const body = await response.json();
+        setMessage(body?.error);
       } else {
         setMessage('Failed to upload file.');
       }
