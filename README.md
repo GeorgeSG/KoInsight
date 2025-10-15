@@ -30,6 +30,8 @@
 - 🏠 Fully self-hostable (Docker image available)
 
 # Screenshots
+<p><strong>Note:</strong>As of 2025-10-15 covers are not (yet) automatically displayed, as they are not part of the KOReader-generated database. If you want to see covers, you'll need to add them once per book. The UI offers a search by title and upload of images under the tab 'Cover Selector'.</p>
+
 <table>
   <tr>
     <td><strong>Home page</strong></td>
