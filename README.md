@@ -72,6 +72,10 @@ services:
 ```
 Run `docker compose up -d`.
 
+# Configuration
+
+The default maximum upload size for the `statistics.sqlite3` file is **100 MB**. This limit can be modified by setting the `MAX_FILE_SIZE_MB` environment variable.
+
 # Usage
 
 ## Reading statistics
@@ -117,22 +121,6 @@ Reload the KoInsight web dashboard. If everything went well (🤞), your data sh
 
 Every time you need to reupload data, you would need to upload the statistics database file again.
 
-⚠️ By default the maximum upload size is 10 MB! This can be configured via a environment variable `MAX_FILE_SIZE_MB` in the `compose.yaml` file.
-
-Example:
-```yaml
-name: koinsight
-services:
-  koinsight:
-    image: ghcr.io/georgesg/koinsight:latest
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./data:/app/data
-    environment:
-      - MAX_FILE_SIZE_MB=50
-```
 
 ## Use as progress sync server
 

@@ -4,7 +4,7 @@ import path from 'path';
 
 const BASE_PATH = __dirname;
 const DATA_PATH = process.env.DATA_PATH || path.resolve(BASE_PATH, '../../../', 'data');
-const MAX_FILE_SIZE_MB = Number(process.env.MAX_FILE_SIZE_MB) || 10;
+const MAX_FILE_SIZE_MB = Number(process.env.MAX_FILE_SIZE_MB) || 100;
 
 const UPLOAD_DB_FILENAME = 'statistics.sqlite3';
 

@@ -29,6 +29,6 @@ COPY plugins ./plugins
 
 ENV NODE_ENV="production"
 ENV DATA_PATH="/app/data"
-ENV MAX_FILE_SIZE_MB="10"
+ENV MAX_FILE_SIZE_MB="100"
 
 CMD ["node", "./apps/server/dist/app.js"]
