@@ -232,59 +232,6 @@ function KoInsightSettings:editServerSettings()
   self.settings_dialog:onShowKeyboard()
 end
 
-function KoInsightSettings:showOptionsMenu()
-  UIManager:show(Menu:new({
-    title = _("KoInsight: Sync options"),
-    item_table = {
-      {
-        text = _("Sync on suspend"),
-        checked_func = function()
-          return self:getSyncOnSuspendEnabled()
-        end,
-        callback = function()
-          self:toggleSyncOnSuspend()
-        end,
-      },
-      {
-        text = _("Aggressive sync (auto Wi-Fi)"),
-        checked_func = function()
-          return self:getAggressiveSuspendEnabled()
-        end,
-        callback = function()
-          self:toggleAggressiveSuspend()
-        end,
-      },
-      {
-        text = _("Set suspend connect timeout…"),
-        keep_menu_open = true,
-        callback = function()
-          self:editTimeoutDialog()
-        end,
-      },
-    },
-    is_popout = false,
-    is_borderless = true,
-  }))
-end
-
-function KoInsightSettings:toggleSyncOnSuspend()
-  local newv = not self:getSyncOnSuspendEnabled()
-  self:setSyncOnSuspendEnabled(newv)
-  UIManager:show(InfoMessage:new({
-    text = newv and _("Sync on suspend enabled") or _("Sync on suspend disabled"),
-    timeout = 2,
-  }))
-end
-
-function KoInsightSettings:toggleAggressiveSuspend()
-  local newv = not self:getAggressiveSuspendEnabled()
-  self:setAggressiveSuspendEnabled(newv)
-  UIManager:show(InfoMessage:new({
-    text = newv and _("Aggressive suspend sync enabled") or _("Aggressive suspend sync disabled"),
-    timeout = 2,
-  }))
-end
-
 function KoInsightSettings:editTimeoutDialog()
   local current = tostring(self:getSuspendConnectTimeout())
   self.timeout_dialog = MultiInputDialog:new({
