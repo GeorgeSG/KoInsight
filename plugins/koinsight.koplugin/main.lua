@@ -99,6 +99,9 @@ function koinsight:addToMainMenu(menu_items)
         checked_func = function()
           return self.koinsight_settings:getAggressiveSuspendEnabled()
         end,
+        enabled_func = function()
+          return self.koinsight_settings:getSyncOnSuspendEnabled()
+        end,
         callback = function()
           self.koinsight_settings:toggleAggressiveSuspend()
         end,
@@ -108,6 +111,9 @@ function koinsight:addToMainMenu(menu_items)
       {
         text = _("Set suspend connect timeout…"),
         keep_menu_open = true,
+        enabled_func = function()
+          return self.koinsight_settings:getSyncOnSuspendEnabled()
+        end,
         callback = function()
           self.koinsight_settings:editTimeoutDialog()
         end,
