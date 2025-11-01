@@ -9,8 +9,6 @@ local KoInsightSettings = require("settings")
 local KoInsightDbReader = require("db_reader")
 local JSON = require("json")
 
-local VERSION = "dev-feat-suspend-sync-1"
-
 local koinsight = WidgetContainer:extend({
   name = "koinsight",
   is_doc_only = false,
@@ -20,27 +18,6 @@ function koinsight:init()
   self:onDispatcherRegisterActions()
   self.ui.menu:registerToMainMenu(self)
   self.koinsight_settings = KoInsightSettings:new({})
-
-  logger.info("[KoInsight] init; plugin version: " .. VERSION)
-  local NetworkMgr = require("ui/network/manager")
-  logger.info(
-    "[KoInsight] NetworkMgr capabilities: "
-      .. "isWifiOn="
-      .. tostring(NetworkMgr.isWifiOn ~= nil)
-      .. ", "
-      .. "isConnected="
-      .. tostring(NetworkMgr.isConnected ~= nil)
-      .. ", "
-      .. "runWhenOnline="
-      .. tostring(NetworkMgr.runWhenOnline ~= nil)
-      .. ", "
-      .. "turnOnWifi="
-      .. tostring(NetworkMgr.turnOnWifi ~= nil)
-      .. ", "
-      .. "turnOffWifi="
-      .. tostring(NetworkMgr.turnOffWifi ~= nil)
-  )
-
   self:initMenuOrder()
 end
 
