@@ -41,25 +41,57 @@ end
 function KoInsightSettings:new()
   local obj = setmetatable({}, self)
   obj.settings = open_settings_handle()
-  obj.data = obj.settings:readSetting(SETTING_KEY, {}) or {}
+  -- Safe initialization with error handling
+  local success, result = pcall(function()
+    return obj.settings:readSetting(SETTING_KEY, {}) or {}
+  end)
+  if success then
+    obj.data = result
+  else
+    logger.err("[KoInsight] Error reading settings, using defaults:", result)
+    obj.data = {}
+  end
   return obj
 end
 
 -- optional for now, if we ever want to re-read from disk
 function KoInsightSettings:reload()
-  self.data = self.settings:readSetting(SETTING_KEY, {}) or {}
+  local success, result = pcall(function()
+    return self.settings:readSetting(SETTING_KEY, {}) or {}
+  end)
+  if success then
+    self.data = result
+  else
+    logger.err("[KoInsight] Error reloading settings:", result)
+  end
 end
 
 function KoInsightSettings:writeData()
-  self.settings:saveSetting(SETTING_KEY, self.data)
-  self.settings:flush()
+  local success, error_msg = pcall(function()
+    if not self.settings then
+      logger.err("[KoInsight] No settings object available for write")
+      return false
+    end
+    logger.dbg("[KoInsight] Saving settings data:", self.data)
+    self.settings:saveSetting(SETTING_KEY, self.data)
+    self.settings:flush()
+    logger.dbg("[KoInsight] Settings saved and flushed successfully")
+    return true
+  end)
+
+  if not success then
+    logger.err("[KoInsight] Error writing settings:", error_msg)
+    return false
+  end
+  return true
 end
 
 function KoInsightSettings:update(patch)
   for k, v in pairs(patch or {}) do
+    logger.dbg("[KoInsight] Updating setting:", k, "=", v)
     self.data[k] = v
   end
-  self:writeData()
+  return self:writeData()
 end
 
 -- getters/setters
@@ -72,35 +104,88 @@ function KoInsightSettings:setServerURL(url)
 end
 
 function KoInsightSettings:getSyncOnSuspendEnabled()
-  return self.data.sync_on_suspend or DEFAULTS.sync_on_suspend
+  local value = self.data.sync_on_suspend
+  if value == nil then
+    logger.dbg("[KoInsight] sync_on_suspend not set, using default:", DEFAULTS.sync_on_suspend)
+    return DEFAULTS.sync_on_suspend
+  end
+  return value
 end
 function KoInsightSettings:setSyncOnSuspendEnabled(enabled)
-  self:update({ ["sync_on_suspend"] = (enabled == true) })
+  return self:update({ sync_on_suspend = (enabled == true) })
+end
+function KoInsightSettings:toggleSyncOnSuspend()
+  local current = self:getSyncOnSuspendEnabled()
+  local new_value = not current
+  local success = self:setSyncOnSuspendEnabled(new_value)
+
+  if success then
+    local message = new_value and _("Sync on suspend enabled") or _("Sync on suspend disabled")
+    UIManager:show(InfoMessage:new({ text = message, timeout = 2 }))
+    logger.info("[KoInsight] Sync on suspend toggled from", current, "to", new_value)
+  else
+    UIManager:show(InfoMessage:new({ text = _("Error toggling sync setting"), timeout = 3 }))
+    logger.err("[KoInsight] Failed to toggle sync_on_suspend")
+  end
+
+  return success
 end
 
 function KoInsightSettings:getAggressiveSuspendEnabled()
-  return self.data.aggressive_suspend_sync or DEFAULTS.aggressive_suspend_sync
+  local value = self.data.aggressive_suspend_sync
+  if value == nil then
+    logger.dbg(
+      "[KoInsight] aggressive_suspend_sync not set, using default:",
+      DEFAULTS.aggressive_suspend_sync
+    )
+    return DEFAULTS.aggressive_suspend_sync
+  end
+  return value
 end
 function KoInsightSettings:setAggressiveSuspendEnabled(enabled)
-  self:update({ ["aggressive_suspend_sync"] = (enabled == true) })
+  return self:update({ aggressive_suspend_sync = (enabled == true) })
+end
+function KoInsightSettings:toggleAggressiveSuspend()
+  local current = self:getAggressiveSuspendEnabled()
+  local new_value = not current
+  local success = self:setAggressiveSuspendEnabled(new_value)
+
+  if success then
+    local message = new_value and _("Aggressive suspend sync enabled")
+      or _("Aggressive suspend sync disabled")
+    UIManager:show(InfoMessage:new({ text = message, timeout = 2 }))
+    logger.info("[KoInsight] Aggressive suspend sync toggled from", current, "to", new_value)
+  else
+    UIManager:show(
+      InfoMessage:new({ text = _("Error toggling aggressive sync setting"), timeout = 3 })
+    )
+    logger.err("[KoInsight] Failed to toggle aggressive_suspend_sync")
+  end
+
+  return success
 end
 
 function KoInsightSettings:getSuspendConnectTimeout()
   local t = tonumber(self.data.suspend_connect_timeout_s)
-  -- íf its an actual number, not nan
+  -- if it's an actual number, not nan
   if not (t and t == t) then
+    logger.dbg(
+      "[KoInsight] suspend_connect_timeout_s not valid, using default:",
+      DEFAULTS.suspend_connect_timeout_s
+    )
     return DEFAULTS.suspend_connect_timeout_s
   end
   return clamp(t, 3, 60)
 end
 function KoInsightSettings:setSuspendConnectTimeout(sec)
   local t = tonumber(sec)
-  -- íf its an actual number, not nan
+  -- if it's an actual number, not nan
   if not (t and t == t) then
+    logger.warn("[KoInsight] Invalid timeout value, using default:", sec)
     t = DEFAULTS.suspend_connect_timeout_s
   end
   t = clamp(t, 3, 60)
-  self:update({ suspend_connect_timeout_s = t })
+  return self:update({ suspend_connect_timeout_s = t })
 end
 
 function KoInsightSettings:editServerSettings()
