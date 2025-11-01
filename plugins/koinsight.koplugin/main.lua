@@ -162,7 +162,15 @@ function koinsight:onSuspend()
   end
 
   logger.info("[KoInsight] Device suspending - syncing data")
-  self:performSyncOnSuspend()
+
+  -- This is the main pathway for suspend sync: if the user enabled aggressive mode,
+  -- then do that (enable WiFi then sync then restore original WiFi state), otherwise
+  -- do normal sync (assume WiFi is already on and sync).
+  if self.koinsight_settings:getAggressiveSuspendEnabled() then
+    self:performAggressiveSyncOnSuspend()
+  else
+    self:performSyncOnSuspend()
+  end
 end
 
 -- Also sync on other relevant events for completeness
@@ -172,7 +180,12 @@ function koinsight:onClose()
   end
 
   logger.info("[KoInsight] System closing - syncing data")
-  self:performSyncOnSuspend()
+
+  if self.koinsight_settings:getAggressiveSuspendEnabled() then
+    self:performAggressiveSyncOnSuspend()
+  else
+    self:performSyncOnSuspend()
+  end
 end
 
 function koinsight:onPowerOff()
@@ -181,7 +194,12 @@ function koinsight:onPowerOff()
   end
 
   logger.info("[KoInsight] Device powering off - syncing data")
-  self:performSyncOnSuspend()
+
+  if self.koinsight_settings:getAggressiveSuspendEnabled() then
+    self:performAggressiveSyncOnSuspend()
+  else
+    self:performSyncOnSuspend()
+  end
 end
 
 function koinsight:onReboot()
@@ -190,7 +208,12 @@ function koinsight:onReboot()
   end
 
   logger.info("[KoInsight] Device rebooting - syncing data")
-  self:performSyncOnSuspend()
+
+  if self.koinsight_settings:getAggressiveSuspendEnabled() then
+    self:performAggressiveSyncOnSuspend()
+  else
+    self:performSyncOnSuspend()
+  end
 end
 
 -- Perform the actual sync with error handling
@@ -221,6 +244,77 @@ function koinsight:performSyncOnSuspend()
     }))
   else
     logger.info("[KoInsight] Suspend sync completed successfully")
+  end
+end
+
+-- Perform aggressive sync: turn on WiFi if needed, sync, restore WiFi state
+function koinsight:performAggressiveSyncOnSuspend()
+  -- Check if we have a server URL configured
+  local server_url = self.koinsight_settings:getServerURL()
+  if not server_url or server_url == "" then
+    logger.info("[KoInsight] No server URL configured, skipping aggressive sync on suspend")
+    return
+  end
+
+  local success, error_msg = pcall(function()
+    local NetworkMgr = require("ui/network/manager")
+    local was_wifi_on = NetworkMgr:isWifiOn()
+
+    logger.info(
+      "[KoInsight] Starting aggressive sync (WiFi was " .. (was_wifi_on and "on" or "off") .. ")"
+    )
+
+    -- Turn on WiFi if it's not already on
+    if not was_wifi_on then
+      logger.info("[KoInsight] Turning on WiFi for sync")
+      NetworkMgr:turnOnWifi()
+
+      -- Wait for WiFi to connect with timeout
+      local timeout = self.koinsight_settings:getSuspendConnectTimeout()
+      local start_time = os.time()
+      local connected = false
+
+      while os.time() - start_time < timeout do
+        if NetworkMgr:isConnected() then
+          connected = true
+          logger.info("[KoInsight] WiFi connected after " .. (os.time() - start_time) .. " seconds")
+          break
+        end
+        -- Small delay to avoid busy waiting
+        os.execute("sleep 0.5")
+      end
+
+      if not connected then
+        logger.warn("[KoInsight] WiFi connection timeout after " .. timeout .. " seconds")
+        -- Try to sync anyway, might still work
+      end
+    end
+
+    -- Perform the actual sync
+    logger.info("[KoInsight] Performing sync")
+    onUpload(server_url, true) -- true = silent mode
+
+    -- Turn off WiFi if we turned it on
+    if not was_wifi_on then
+      logger.info("[KoInsight] Turning off WiFi after sync")
+      NetworkMgr:turnOffWifi()
+    end
+
+    logger.info("[KoInsight] Aggressive sync completed successfully")
+  end)
+
+  if not success then
+    local message = "Error during aggressive auto sync: " .. tostring(error_msg)
+    logger.err("[KoInsight] " .. message)
+
+    -- Try to restore WiFi state in case of error
+    pcall(function()
+      local NetworkMgr = require("ui/network/manager")
+      if NetworkMgr:isWifiOn() then
+        logger.info("[KoInsight] Cleaning up: turning off WiFi after error")
+        NetworkMgr:turnOffWifi()
+      end
+    end)
   end
 end
 
