@@ -156,21 +156,6 @@ function koinsight:onSuspend()
   end
 end
 
--- Also sync on other relevant events for completeness
-function koinsight:onClose()
-  if not self.koinsight_settings:getSyncOnSuspendEnabled() then
-    return
-  end
-
-  logger.info("[KoInsight] System closing - syncing data")
-
-  if self.koinsight_settings:getAggressiveSuspendEnabled() then
-    self:performAggressiveSyncOnSuspend()
-  else
-    self:performSyncOnSuspend()
-  end
-end
-
 function koinsight:onPowerOff()
   if not self.koinsight_settings:getSyncOnSuspendEnabled() then
     return
