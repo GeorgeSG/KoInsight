@@ -5,7 +5,7 @@ local JSON = require("json")
 local KoInsightDbReader = require("db_reader")
 local logger = require("logger")
 local UIManager = require("ui/uimanager")
-local const = require("const")
+local const = require("./const")
 local Device = require("device")
 
 local API_UPLOAD_LOCATION = "/api/plugin/import"
