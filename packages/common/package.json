@@ -6,5 +6,11 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
-  }
+  },
+  "peerDependencies": {
+   "zod": "^3.23.0"
+  },
+  "devDependencies": {
+   "zod": "^3.23.0"
+ }
 }
