@@ -14,6 +14,7 @@ import {
   IconMoon,
   IconReload,
   IconSun,
+  IconCloud,
 } from '@tabler/icons-react';
 import { JSX, useState } from 'react';
 import { NavLink, useLocation } from 'react-router';
@@ -23,6 +24,7 @@ import { DownloadPluginModal } from './download-plugin';
 import { UploadForm } from './upload-form';
 
 import style from './navbar.module.css';
+import { WebDavSyncButton } from '../upload/web-dav-sync-button';
 
 export function Navbar({ onNavigate }: { onNavigate?: () => void }): JSX.Element {
   const { pathname } = useLocation();
@@ -84,6 +86,7 @@ export function Navbar({ onNavigate }: { onNavigate?: () => void }): JSX.Element
       <div className={style.Footer}>
         <Flex gap="xs">
           <UploadForm />
+          <WebDavSyncButton />
           <ActionIcon
             onClick={toggleColorScheme}
             variant="default"
