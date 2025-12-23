@@ -1,8 +1,12 @@
 local SQ3 = require("lua-ljsqlite3/init")
 local DataStorage = require("datastorage")
+local LuaSettings = require("luasettings")
 local logger = require("logger")
+local lfs = require("libs/libkoreader-lfs")
 
 local db_location = DataStorage:getSettingsDir() .. "/statistics.sqlite3"
+local docsettings_dir = DataStorage:getDocSettingsDir()
+local home_dir = DataStorage:getDataDir() -- Where books are typically stored
 
 local KoInsightDbReader = {}
 
@@ -74,6 +78,103 @@ function KoInsightDbReader.progressData()
 
   conn:close()
   return results
+end
+
+-- Recursively scan a directory for .sdr folders containing metadata.lua
+local function scanForSidecarFiles(dir, results)
+  results = results or {}
+
+  local ok, iter, dir_obj = pcall(lfs.dir, dir)
+  if not ok then
+    return results
+  end
+
+  for entry in iter, dir_obj do
+    if entry ~= "." and entry ~= ".." then
+      local full_path = dir .. "/" .. entry
+      local mode = lfs.attributes(full_path, "mode")
+
+      if mode == "directory" then
+        if entry:match("%.sdr$") then
+          -- This is a sidecar directory, look for metadata*.lua files
+          local sdr_ok, sdr_iter, sdr_obj = pcall(lfs.dir, full_path)
+          if sdr_ok then
+            for sdr_entry in sdr_iter, sdr_obj do
+              if sdr_entry:match("^metadata.*%.lua$") then
+                table.insert(results, full_path .. "/" .. sdr_entry)
+                break -- Only need one metadata file per sdr
+              end
+            end
+          end
+        else
+          -- Recurse into subdirectory
+          scanForSidecarFiles(full_path, results)
+        end
+      end
+    end
+  end
+
+  return results
+end
+
+-- Read book statuses from sidecar files and return a mapping of md5 -> status
+function KoInsightDbReader.getBookStatuses()
+  local statuses = {}
+  local sidecar_files = {}
+
+  -- Scan both docsettings directory and home/books directory for sidecar files
+  local dirs_to_scan = { docsettings_dir, home_dir }
+
+  for _, dir in ipairs(dirs_to_scan) do
+    logger.info("[KoInsight] Scanning for sidecar files in:", dir)
+    scanForSidecarFiles(dir, sidecar_files)
+  end
+
+  logger.info("[KoInsight] Found", #sidecar_files, "sidecar files total")
+
+  for _, metadata_path in ipairs(sidecar_files) do
+    logger.dbg("[KoInsight] Reading metadata from:", metadata_path)
+    local ok, settings = pcall(function()
+      return LuaSettings:open(metadata_path)
+    end)
+
+    if ok and settings then
+      -- Get the MD5 checksum (stored at root level as partial_md5_checksum)
+      local md5 = settings:readSetting("partial_md5_checksum")
+      local summary = settings:readSetting("summary")
+
+      logger.dbg("[KoInsight] partial_md5_checksum:", md5 or "nil")
+      logger.dbg("[KoInsight] summary:", summary and "found" or "nil")
+
+      if md5 then
+        if summary and summary.status then
+          local status = summary.status
+
+          -- Normalize status values
+          if status == "complete" or status == "completed" then
+            status = "complete"
+          elseif status == "on hold" then
+            status = "on_hold"
+          end
+
+          statuses[md5] = status
+          logger.info("[KoInsight] Found status for", md5, ":", status)
+        else
+          logger.dbg("[KoInsight] No status set for book:", md5)
+        end
+      end
+    else
+      logger.warn("[KoInsight] Failed to read metadata:", metadata_path)
+    end
+  end
+
+  -- Count table entries (# doesn't work for tables with string keys)
+  local count = 0
+  for _ in pairs(statuses) do
+    count = count + 1
+  end
+  logger.info("[KoInsight] Loaded statuses for", count, "books")
+  return statuses
 end
 
 return KoInsightDbReader

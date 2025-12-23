@@ -46,10 +46,14 @@ export class UploadService {
         authors: book.authors,
         series: book.series,
         language: book.language,
+        status: book.status ?? null,
       }));
 
       await Promise.all(
-        newBooks.map(({ id, ...book }) => trx<Book>('book').insert(book).onConflict('md5').ignore())
+        newBooks.map(({ id, ...book }) => {
+          const query = trx<Book>('book').insert(book).onConflict('md5');
+          return book.status ? query.merge(['status']) : query.ignore();
+        })
       );
 
       const hasUnknownDevices =

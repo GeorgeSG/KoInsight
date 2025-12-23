@@ -1,8 +1,11 @@
+import { BookStatus } from '@koinsight/common/types/book';
 import { NextFunction, Request, Response, Router } from 'express';
 import { BooksRepository } from './books-repository';
 import { BooksService } from './books-service';
 import { coversRouter } from './covers/covers-router';
 import { getBookById } from './get-book-by-id-middleware';
+
+const VALID_STATUSES: BookStatus[] = ['complete', 'reading', 'abandoned', 'on_hold', null];
 
 const router = Router();
 
@@ -98,6 +101,32 @@ router.put('/:bookId/reference_pages', getBookById, async (req: Request, res: Re
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to update reference pages' });
+  }
+});
+
+/**
+ * Updates a book's status (complete, reading, abandoned, on_hold, or null)
+ */
+router.put('/:bookId/status', getBookById, async (req: Request, res: Response) => {
+  const book = req.book!;
+  const { status } = req.body;
+
+  if (status === undefined) {
+    res.status(400).json({ error: 'Missing required fields' });
+    return;
+  }
+
+  if (!VALID_STATUSES.includes(status)) {
+    res.status(400).json({ error: 'Invalid status value' });
+    return;
+  }
+
+  try {
+    await BooksRepository.setStatus(book.id, status);
+    res.status(200).json({ message: 'Status updated' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update status' });
   }
 });
 

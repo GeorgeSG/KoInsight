@@ -1,5 +1,5 @@
 import { BookGenre, BookWithData } from '@koinsight/common/types';
-import { Book } from '@koinsight/common/types/book';
+import { Book, BookStatus } from '@koinsight/common/types/book';
 import { BookDevice } from '@koinsight/common/types/book-device';
 import { Genre } from '@koinsight/common/types/genre';
 import { sum } from 'ramda';
@@ -121,5 +121,9 @@ export class BooksRepository {
 
   static async setReferencePages(id: number, referencePages: number | null) {
     return db<Book>('book').where({ id }).update({ reference_pages: referencePages });
+  }
+
+  static async setStatus(id: number, status: BookStatus) {
+    return db<Book>('book').where({ id }).update({ status });
   }
 }
