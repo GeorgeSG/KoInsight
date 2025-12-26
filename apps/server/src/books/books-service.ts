@@ -1,5 +1,6 @@
 import { Book, BookDevice, BookWithData, PageStat } from '@koinsight/common/types';
 import { startOfDay } from 'date-fns';
+import { AnnotationsRepository } from '../annotations/annotations-repository';
 import { GenreRepository } from '../genres/genre-repository';
 import { StatsRepository } from '../stats/stats-repository';
 import { normalizeRanges, Range, totalRangeLength } from '../utils/ranges';
@@ -70,6 +71,10 @@ export class BooksService {
     const bookDevices = await BooksRepository.getBookDevices(book.md5);
     const genres = await GenreRepository.getByBookMd5(book.md5);
 
+    // Get annotations data
+    const annotations = await AnnotationsRepository.getByBookMd5(book.md5);
+    const annotationCounts = await AnnotationsRepository.getCountsByType(book.md5);
+
     const total_pages = this.getTotalPages(book, bookDevices);
     const total_read_time = this.getTotalReadTime(bookDevices);
     const started_reading = this.getStartedReading(stats);
@@ -92,11 +97,11 @@ export class BooksService {
       genres,
       notes: bookDevices.reduce((acc, device) => acc + device.notes, 0),
       highlights: bookDevices.reduce((acc, device) => acc + device.highlights, 0),
-      // Annotation counts (empty for now, will be populated in Phase 3)
-      annotations: [],
-      highlights_count: 0,
-      notes_count: 0,
-      bookmarks_count: 0,
+      // Annotation data
+      annotations,
+      highlights_count: annotationCounts.highlight,
+      notes_count: annotationCounts.note,
+      bookmarks_count: annotationCounts.bookmark,
     };
 
     return response;

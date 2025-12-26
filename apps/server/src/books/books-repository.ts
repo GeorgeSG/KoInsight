@@ -3,6 +3,7 @@ import { Book } from '@koinsight/common/types/book';
 import { BookDevice } from '@koinsight/common/types/book-device';
 import { Genre } from '@koinsight/common/types/genre';
 import { sum } from 'ramda';
+import { AnnotationsRepository } from '../annotations/annotations-repository';
 import { GenreRepository } from '../genres/genre-repository';
 import { db } from '../knex';
 import { StatsRepository } from '../stats/stats-repository';
@@ -83,6 +84,10 @@ export class BooksRepository {
       books.map(async (book): Promise<BookWithData> => {
         const stats = await StatsRepository.getByBookMD5(book.md5);
 
+        // Get annotations data
+        const annotations = await AnnotationsRepository.getByBookMd5(book.md5);
+        const annotationCounts = await AnnotationsRepository.getCountsByType(book.md5);
+
         const genres = JSON.parse(book.genres) as Genre[];
         const bookDevices = JSON.parse(book.book_devices) as BookDevice[];
 
@@ -109,11 +114,11 @@ export class BooksRepository {
           notes: sum(bookDevices.map((device) => device.notes)),
           read_per_day,
           started_reading,
-          // Annotation data (empty for now, will be populated in Phase 3)
-          annotations: [],
-          highlights_count: 0,
-          notes_count: 0,
-          bookmarks_count: 0,
+          // Annotation data
+          annotations,
+          highlights_count: annotationCounts.highlight,
+          notes_count: annotationCounts.note,
+          bookmarks_count: annotationCounts.bookmark,
           stats,
         };
       })

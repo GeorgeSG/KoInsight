@@ -2,11 +2,13 @@ import {
   Book,
   BookDevice,
   Device,
+  KoReaderAnnotation,
   KoReaderBook,
   KoReaderPageStat,
   PageStat,
 } from '@koinsight/common/types';
 import Database, { Database as DatabaseType } from 'better-sqlite3';
+import { AnnotationsRepository } from '../annotations/annotations-repository';
 import { db } from '../knex';
 
 export class UploadService {
@@ -36,7 +38,11 @@ export class UploadService {
     return { newBooks, newPageStats };
   }
 
-  static uploadStatisticData(booksToImport: KoReaderBook[], newPageStats: PageStat[]) {
+  static uploadStatisticData(
+    booksToImport: KoReaderBook[],
+    newPageStats: PageStat[],
+    annotationsByBook?: Record<string, KoReaderAnnotation[]>
+  ) {
     return db.transaction(async (trx) => {
       // Insert books
       const newBooks: Partial<Book>[] = booksToImport.map((book) => ({
@@ -105,6 +111,17 @@ export class UploadService {
             .merge(['duration', 'total_pages'])
         )
       );
+
+      // Insert annotations if provided
+      if (annotationsByBook) {
+        const deviceId = newPageStats.length > 0 ? newPageStats[0].device_id : this.UNKNOWN_DEVICE_ID;
+        
+        await Promise.all(
+          Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
+            AnnotationsRepository.bulkInsert(bookMd5, deviceId, annotations)
+          )
+        );
+      }
 
       await trx.commit();
     });
