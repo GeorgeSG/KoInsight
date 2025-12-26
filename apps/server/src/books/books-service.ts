@@ -92,6 +92,11 @@ export class BooksService {
       genres,
       notes: bookDevices.reduce((acc, device) => acc + device.notes, 0),
       highlights: bookDevices.reduce((acc, device) => acc + device.highlights, 0),
+      // Annotation counts (empty for now, will be populated in Phase 3)
+      annotations: [],
+      highlights_count: 0,
+      notes_count: 0,
+      bookmarks_count: 0,
     };
 
     return response;

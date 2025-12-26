@@ -109,6 +109,12 @@ export class BooksRepository {
           notes: sum(bookDevices.map((device) => device.notes)),
           read_per_day,
           started_reading,
+          // Annotation data (empty for now, will be populated in Phase 3)
+          annotations: [],
+          highlights_count: 0,
+          notes_count: 0,
+          bookmarks_count: 0,
+          stats,
         };
       })
     );
