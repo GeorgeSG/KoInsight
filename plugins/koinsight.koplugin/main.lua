@@ -137,7 +137,7 @@ function koinsight:performSyncOnSuspend()
   end)
   
   if not success then
-    message = "Error during auto sync: " .. tostring(error_msg)
+    local message = "Error during auto sync: " .. tostring(error_msg)
     logger.err("[KoInsight] " .. message)
     UIManager:show(InfoMessage:new({
       text = _(message),
