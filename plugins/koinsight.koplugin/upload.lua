@@ -3,6 +3,7 @@ local callApi = require("call_api")
 local InfoMessage = require("ui/widget/infomessage")
 local JSON = require("json")
 local KoInsightDbReader = require("db_reader")
+local KoInsightAnnotationReader = require("annotation_reader")
 local logger = require("logger")
 local UIManager = require("ui/uimanager")
 local const = require("./const")
@@ -50,9 +51,22 @@ end
 function send_statistics_data(server_url, silent)
   local url = server_url .. API_UPLOAD_LOCATION
 
+  -- Get annotations from currently opened book
+  local annotations = KoInsightAnnotationReader.getAnnotationsByBook()
+  
+  local annotation_count = 0
+  for _, book_annotations in pairs(annotations) do
+    annotation_count = annotation_count + #book_annotations
+  end
+  
+  if annotation_count > 0 then
+    logger.info("[KoInsight] Syncing", annotation_count, "annotations")
+  end
+
   local body = {
     stats = KoInsightDbReader.progressData(),
     books = KoInsightDbReader.bookData(),
+    annotations = annotations,
     version = const.VERSION,
   }
 

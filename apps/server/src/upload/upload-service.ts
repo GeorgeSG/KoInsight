@@ -118,7 +118,7 @@ export class UploadService {
         
         await Promise.all(
           Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
-            AnnotationsRepository.bulkInsert(bookMd5, deviceId, annotations)
+            AnnotationsRepository.bulkInsert(bookMd5, deviceId, annotations, trx)
           )
         );
       }

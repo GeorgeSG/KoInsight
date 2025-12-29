@@ -53,11 +53,13 @@ export class AnnotationsRepository {
 
   /**
    * Bulk insert annotations from KoReader
+   * Can accept an optional transaction to avoid nested transactions
    */
   static async bulkInsert(
     bookMd5: string,
     deviceId: string,
-    koreaderAnnotations: KoReaderAnnotation[]
+    koreaderAnnotations: KoReaderAnnotation[],
+    trx?: any
   ): Promise<void> {
     if (koreaderAnnotations.length === 0) {
       return;
@@ -67,14 +69,21 @@ export class AnnotationsRepository {
       this.convertFromKoReader(bookMd5, deviceId, ka)
     );
 
-    await db.transaction(async (trx) => {
+    const insertAnnotations = async (transaction: any) => {
       for (const annotation of annotations) {
-        await trx('annotation')
+        await transaction('annotation')
           .insert(annotation)
           .onConflict(['book_md5', 'device_id', 'page_ref', 'datetime'])
           .merge(['text', 'note', 'datetime_updated', 'pageno', 'chapter', 'updated_at']);
       }
-    });
+    };
+
+    // Use provided transaction or create a new one
+    if (trx) {
+      await insertAnnotations(trx);
+    } else {
+      await db.transaction(insertAnnotations);
+    }
   }
 
   /**
