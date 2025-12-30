@@ -217,6 +217,47 @@ describe('AnnotationsRepository', () => {
       expect(annotations[0].datetime_updated).toBe('2024-01-16T10:00:00');
     });
 
+    it('preserves pageno and total_pages on update (immutable historical data)', async () => {
+      const koreaderAnnotation: KoReaderAnnotation = {
+        datetime: '2024-01-15T10:30:45',
+        drawer: 'lighten',
+        color: 'yellow',
+        text: 'Original text',
+        chapter: 'Chapter 1',
+        pageno: 407,
+        page: 10,
+        total_pages: 1802,
+        pos0: { x: 100, y: 200, page: 10 },
+        pos1: { x: 400, y: 220, page: 10 },
+      };
+
+      // Insert first time with pageno: 407, total_pages: 1802
+      await AnnotationsRepository.bulkInsert(book.md5, device.id, [koreaderAnnotation]);
+
+      // Simulate KoReader sending wrong/updated pageno (e.g., after reflow or bug)
+      const updatedAnnotation = {
+        ...koreaderAnnotation,
+        text: 'Updated text',
+        note: 'Added note',
+        pageno: 373, // ❌ Different pageno (bug or reflow)
+        total_pages: 2000, // ❌ Different total_pages
+        datetime_updated: '2024-01-16T10:00:00',
+      };
+
+      await AnnotationsRepository.bulkInsert(book.md5, device.id, [updatedAnnotation]);
+
+      const annotations = await AnnotationsRepository.getByBookMd5(book.md5);
+
+      expect(annotations).toHaveLength(1);
+      // These should be updated (user-editable fields)
+      expect(annotations[0].text).toBe('Updated text');
+      expect(annotations[0].note).toBe('Added note');
+      expect(annotations[0].datetime_updated).toBe('2024-01-16T10:00:00');
+      // These MUST be preserved (immutable historical data)
+      expect(annotations[0].pageno).toBe(407); // ✓ Original pageno preserved!
+      expect(annotations[0].total_pages).toBe(1802); // ✓ Original total_pages preserved!
+    });
+
     it('correctly identifies annotation types', async () => {
       const koreaderAnnotations: KoReaderAnnotation[] = [
         {

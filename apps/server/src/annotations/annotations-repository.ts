@@ -81,7 +81,9 @@ export class AnnotationsRepository {
         await transaction('annotation')
           .insert(annotation)
           .onConflict(['book_md5', 'device_id', 'page_ref', 'datetime'])
-          .merge(['text', 'note', 'datetime_updated', 'pageno', 'chapter', 'updated_at']);
+          // Only update fields that users can actually change in KoReader
+          // Do NOT update pageno/total_pages - these are historical context!
+          .merge(['text', 'note', 'datetime_updated', 'chapter', 'updated_at']);
       }
     };
 

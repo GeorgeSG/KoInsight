@@ -20,6 +20,9 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
     groupBy: 'none',
   });
 
+  // Use reference_pages if available, otherwise use total_pages from device data
+  const currentTotalPages = book.reference_pages || book.total_pages;
+
   const filteredAndSortedAnnotations = useMemo(() => {
     let filtered = book.annotations;
 
@@ -28,7 +31,7 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
 
     // Filter by deleted status
     if (!filters.showDeleted) {
-      filtered = filtered.filter((a) => !a.deleted_at);
+      filtered = filtered.filter((a) => !a.deleted_at && !a.deleted);
     }
 
     // Filter by search text
@@ -89,7 +92,11 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
   const renderAnnotationsList = (annotations: Annotation[]) => (
     <Stack gap="md">
       {annotations.map((annotation) => (
-        <AnnotationCard key={annotation.id} annotation={annotation} />
+        <AnnotationCard 
+          key={annotation.id} 
+          annotation={annotation} 
+          currentTotalPages={currentTotalPages}
+        />
       ))}
     </Stack>
   );
