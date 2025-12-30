@@ -139,7 +139,7 @@ function KoInsightAnnotationReader.getAnnotationsByBook()
       chapter = annotation.chapter,
       pageno = annotation.pageno,
       page = annotation.page,
-      total_pages = total_pages, -- Add total pages at time of annotation
+      total_pages = total_pages, -- Current document total pages (captured at sync time)
     }
 
     -- Include datetime_updated if it exists
