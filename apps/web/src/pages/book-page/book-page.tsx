@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Badge,
   Box,
   Flex,
@@ -9,8 +10,9 @@ import {
   Stack,
   Tabs,
   Text,
+  Tooltip,
 } from '@mantine/core';
-import { IconCalendar, IconHighlight, IconPhoto, IconSettings, IconTable } from '@tabler/icons-react';
+import { IconCalendar, IconHighlight, IconPhoto, IconRefresh, IconSettings, IconTable } from '@tabler/icons-react';
 import { sum } from 'ramda';
 import { JSX } from 'react';
 import { useParams } from 'react-router';
@@ -25,7 +27,7 @@ import { BookPageRaw } from './book-page-raw';
 
 export function BookPage(): JSX.Element {
   const { id } = useParams() as { id: string };
-  const { data: book, isLoading } = useBookWithData(Number(id));
+  const { data: book, isLoading, mutate } = useBookWithData(Number(id));
 
   const avgPerDay = book ? book.total_read_time / Object.keys(book.read_per_day).length : 0;
 
@@ -80,12 +82,23 @@ export function BookPage(): JSX.Element {
         </Paper>
       </Group>
 
-      <Flex gap="xs">
-        {book.genres?.map((genre) => (
-          <Badge radius="sm" variant="outline" key={genre.id}>
-            {genre.name}
-          </Badge>
-        ))}
+      <Flex gap="xs" justify="space-between" align="center">
+        <Group gap="xs">
+          {book.genres?.map((genre) => (
+            <Badge radius="sm" variant="outline" key={genre.id}>
+              {genre.name}
+            </Badge>
+          ))}
+        </Group>
+        <Tooltip label="Refresh book data">
+          <ActionIcon 
+            variant="subtle" 
+            onClick={() => mutate()}
+            aria-label="Refresh book data"
+          >
+            <IconRefresh size={18} />
+          </ActionIcon>
+        </Tooltip>
       </Flex>
 
       <Tabs defaultValue="calendar">
