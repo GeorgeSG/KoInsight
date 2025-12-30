@@ -4,8 +4,9 @@ import { db } from '../knex';
 export class AnnotationsRepository {
   /**
    * Get all annotations for a book, optionally filtered by device
+   * @param includeDeleted - If true, includes soft-deleted annotations
    */
-  static async getByBookMd5(md5: string, deviceId?: string): Promise<Annotation[]> {
+  static async getByBookMd5(md5: string, deviceId?: string, includeDeleted = false): Promise<Annotation[]> {
     let query = db<Annotation>('annotation')
       .where({ book_md5: md5 })
       .orderBy('datetime', 'desc');
@@ -14,13 +15,19 @@ export class AnnotationsRepository {
       query = query.where({ device_id: deviceId });
     }
 
+    // Filter out soft-deleted annotations by default
+    if (!includeDeleted) {
+      query = query.whereNull('deleted_at');
+    }
+
     const annotations = await query;
 
-    // Parse JSON position data
+    // Parse JSON position data and expose a simple `deleted` flag for clients
     return annotations.map((a) => ({
       ...a,
       pos0: a.pos0 ? JSON.parse(a.pos0 as string) : undefined,
       pos1: a.pos1 ? JSON.parse(a.pos1 as string) : undefined,
+      deleted: Boolean(a.deleted_at),
     }));
   }
 
@@ -149,6 +156,7 @@ export class AnnotationsRepository {
   static async getCountsByType(md5: string): Promise<Record<AnnotationType, number>> {
     const counts = await db('annotation')
       .where({ book_md5: md5 })
+      .whereNull('deleted_at') // Only count non-deleted annotations
       .select('annotation_type')
       .count('* as count')
       .groupBy('annotation_type');
@@ -164,6 +172,19 @@ export class AnnotationsRepository {
     });
 
     return result;
+  }
+
+  /**
+   * Get total count of deleted annotations for a book
+   */
+  static async getDeletedCount(md5: string): Promise<number> {
+    const result = await db('annotation')
+      .where({ book_md5: md5 })
+      .whereNotNull('deleted_at')
+      .count('* as count')
+      .first();
+
+    return result ? Number(result.count) : 0;
   }
 
   /**
@@ -200,5 +221,60 @@ export class AnnotationsRepository {
       datetime: ka.datetime,
       datetime_updated: ka.datetime_updated,
     };
+  }
+
+  /**
+   * Soft-delete an annotation by ID
+   * Sets deleted_at to current timestamp instead of removing the record
+   */
+  static async markAsDeleted(id: number): Promise<number> {
+    return db('annotation')
+      .where({ id })
+      .update({ deleted_at: db.fn.now() });
+  }
+
+  /**
+   * Soft-delete multiple annotations by their identifiers
+   * Used during sync to mark annotations that were deleted in KoReader
+   * 
+   * @param bookMd5 - The book's MD5 hash
+   * @param deviceId - The device ID
+   * @param identifiers - Array of unique identifiers (page_ref + datetime)
+   * @param trx - Optional transaction to use
+   */
+  static async markManyAsDeleted(
+    bookMd5: string,
+    deviceId: string,
+    identifiers: Array<{ page_ref: string; datetime: string }>,
+    trx?: any
+  ): Promise<number> {
+    if (identifiers.length === 0) {
+      return 0;
+    }
+
+    const executor = trx || db;
+    
+    // Build conditions for each identifier
+    const query = executor('annotation')
+      .where({ book_md5: bookMd5, device_id: deviceId })
+      .whereNull('deleted_at') // Only mark if not already deleted
+      .where((builder: any) => {
+        identifiers.forEach(({ page_ref, datetime }) => {
+          builder.orWhere({ page_ref, datetime });
+        });
+      })
+      .update({ deleted_at: db.fn.now() });
+
+    return query;
+  }
+
+  /**
+   * Restore a soft-deleted annotation
+   * Sets deleted_at back to NULL
+   */
+  static async restore(id: number): Promise<number> {
+    return db('annotation')
+      .where({ id })
+      .update({ deleted_at: null });
   }
 }

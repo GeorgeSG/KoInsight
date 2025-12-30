@@ -41,7 +41,8 @@ export class UploadService {
   static uploadStatisticData(
     booksToImport: KoReaderBook[],
     newPageStats: PageStat[],
-    annotationsByBook?: Record<string, KoReaderAnnotation[]>
+    annotationsByBook?: Record<string, KoReaderAnnotation[]>,
+    syncAnnotationDeletions = true
   ) {
     return db.transaction(async (trx) => {
       // Insert books
@@ -121,9 +122,63 @@ export class UploadService {
             AnnotationsRepository.bulkInsert(bookMd5, deviceId, annotations, trx)
           )
         );
+
+        // Detect and mark deleted annotations if enabled
+        if (syncAnnotationDeletions) {
+          await Promise.all(
+            Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
+              this.detectAndMarkDeletedAnnotations(bookMd5, deviceId, annotations, trx)
+            )
+          );
+        }
       }
 
       await trx.commit();
     });
+  }
+
+  /**
+   * Detect annotations that exist in the database but not in the sync data
+   * These annotations were deleted in KoReader and should be marked as deleted
+   * 
+   * @param bookMd5 - The book's MD5 hash
+   * @param deviceId - The device ID
+   * @param syncedAnnotations - Annotations received from KoReader
+   * @param trx - Transaction to use
+   */
+  private static async detectAndMarkDeletedAnnotations(
+    bookMd5: string,
+    deviceId: string,
+    syncedAnnotations: KoReaderAnnotation[],
+    trx: any
+  ): Promise<void> {
+    // Get all existing non-deleted annotations for this book and device
+    const existingAnnotations = await trx('annotation')
+      .where({ book_md5: bookMd5, device_id: deviceId })
+      .whereNull('deleted_at')
+      .select('page_ref', 'datetime');
+
+    // Create a Set of identifiers from synced annotations for fast lookup
+    const syncedIdentifiers = new Set(
+      syncedAnnotations.map((a) => `${a.page}|${a.datetime}`)
+    );
+
+    // Find annotations that exist in DB but not in synced data
+    const deletedAnnotations = existingAnnotations.filter(
+      (a: { page_ref: string; datetime: string }) => !syncedIdentifiers.has(`${a.page_ref}|${a.datetime}`)
+    );
+
+    if (deletedAnnotations.length > 0) {
+      console.log(
+        `Marked ${deletedAnnotations.length} annotations as deleted for book ${bookMd5}`
+      );
+
+      await AnnotationsRepository.markManyAsDeleted(
+        bookMd5,
+        deviceId,
+        deletedAnnotations,
+        trx
+      );
+    }
   }
 }

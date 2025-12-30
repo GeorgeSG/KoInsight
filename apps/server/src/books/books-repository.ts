@@ -119,6 +119,7 @@ export class BooksRepository {
           highlights_count: annotationCounts.highlight,
           notes_count: annotationCounts.note,
           bookmarks_count: annotationCounts.bookmark,
+          deleted_count: await AnnotationsRepository.getDeletedCount(book.md5),
           stats,
         };
       })

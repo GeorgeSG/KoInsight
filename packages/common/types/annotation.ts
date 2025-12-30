@@ -37,6 +37,8 @@ export type Annotation = {
   // Metadata
   created_at: string;
   updated_at: string;
+  deleted_at?: string; // Soft-delete timestamp
+  deleted?: boolean; // convenience flag set by API
 };
 
 // What we receive from KoReader plugin (.sdr metadata files)

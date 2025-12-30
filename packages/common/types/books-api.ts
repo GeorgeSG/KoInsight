@@ -17,6 +17,7 @@ type Stats = {
   highlights_count: number;
   notes_count: number;
   bookmarks_count: number;
+  deleted_count: number;
 };
 
 type RelatedEntities = {

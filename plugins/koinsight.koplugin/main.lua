@@ -105,8 +105,35 @@ function koinsight:addToMainMenu(menu_items)
           self.koinsight_settings:editServerSettings()
         end,
       },
-
-      -- 6) About KoInsight
+      {
+        text = _("Synchronize data"),
+        separator = true,
+        callback = function()
+          onUpload(
+            self.koinsight_settings.server_url,
+            false,
+            self.koinsight_settings.sync_annotation_deletions
+          )
+        end,
+      },
+      {
+        text = _("Sync on suspend"),
+        checked_func = function()
+          return self:getSyncOnSuspendEnabled()
+        end,
+        callback = function()
+          self:toggleSyncOnSuspend()
+        end,
+      },
+      {
+        text = _("Sync deletions"),
+        checked_func = function()
+          return self.koinsight_settings.sync_annotation_deletions
+        end,
+        callback = function()
+          self.koinsight_settings:toggleSyncDeletions()
+        end,
+      },
       {
         text = _("About KoInsight"),
         keep_menu_open = true,
@@ -134,7 +161,11 @@ function koinsight:onDispatcherRegisterActions()
 end
 
 function koinsight:onKoInsightSync()
-  onUpload(self.koinsight_settings:getServerURL())
+  onUpload(
+    self.koinsight_settings.server_url,
+    false,
+    self.koinsight_settings.sync_annotation_deletions
+  )
 end
 
 -- Sync when device suspends
@@ -201,7 +232,11 @@ function koinsight:performSyncOnSuspend()
 
   -- Perform sync in a protected call to avoid crashing on suspend
   local success, error_msg = pcall(function()
-    onUpload(server_url, true) -- true = silent mode
+    onUpload(
+      self.koinsight_settings.server_url,
+      true,
+      self.koinsight_settings.sync_annotation_deletions
+    ) -- true = silent mode
   end)
 
   if not success then

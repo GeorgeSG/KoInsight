@@ -48,7 +48,7 @@ function send_device_data(server_url, silent)
   end
 end
 
-function send_statistics_data(server_url, silent)
+function send_statistics_data(server_url, silent, sync_annotation_deletions)
   local url = server_url .. API_UPLOAD_LOCATION
 
   -- Get annotations from currently opened book
@@ -67,6 +67,7 @@ function send_statistics_data(server_url, silent)
     stats = KoInsightDbReader.progressData(),
     books = KoInsightDbReader.bookData(),
     annotations = annotations,
+    sync_annotation_deletions = sync_annotation_deletions,
     version = const.VERSION,
   }
 
@@ -83,9 +84,12 @@ function send_statistics_data(server_url, silent)
   end
 end
 
-return function(server_url, silent)
+return function(server_url, silent, sync_annotation_deletions)
   if silent == nil then
     silent = false
+  end
+  if sync_annotation_deletions == nil then
+    sync_annotation_deletions = true -- Default to enabled
   end
   if server_url == nil or server_url == "" then
     UIManager:show(InfoMessage:new({
@@ -95,5 +99,5 @@ return function(server_url, silent)
   end
 
   send_device_data(server_url, silent)
-  send_statistics_data(server_url, silent)
+  send_statistics_data(server_url, silent, sync_annotation_deletions)
 end
