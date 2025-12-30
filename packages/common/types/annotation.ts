@@ -25,6 +25,7 @@ export type Annotation = {
   chapter?: string;
   pageno?: number;
   page_ref: string;
+  total_pages?: number; // Total pages in document at time of annotation
 
   // Position (stored as JSON strings in DB, parsed to objects)
   pos0?: string | AnnotationPosition;
@@ -54,6 +55,7 @@ export type KoReaderAnnotation = {
   pageno?: number;
   pageref?: string;
   page: number | string; // PDF: number, EPUB: xPointer string
+  total_pages?: number; // Total pages in document at time of annotation
   pos0?: AnnotationPosition;
   pos1?: AnnotationPosition;
   pboxes?: any[]; // PDF position boxes (advanced)

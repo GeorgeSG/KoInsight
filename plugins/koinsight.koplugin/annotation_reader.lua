@@ -90,8 +90,19 @@ function KoInsightAnnotationReader.getCurrentBookAnnotations()
     return nil
   end
 
+  -- Get total pages from the current document
+  -- We need this because we store the page number at time of creation of each annotation
+  -- But this page number changes after a reflow. By also storing the total page number
+  -- at time of creation, we can always calculate the page for any given total page number.
+  -- This is similar to how stats are handled.
+  local total_pages = nil
+  if ui and ui.document then
+    total_pages = ui.document:getPageCount()
+    logger.dbg("[KoInsight] Document has", total_pages, "total pages")
+  end
+
   logger.info("[KoInsight] Found", #annotations, "annotations for current book")
-  return annotations
+  return annotations, total_pages
 end
 
 -- Get annotations organized by book md5
@@ -100,7 +111,7 @@ function KoInsightAnnotationReader.getAnnotationsByBook()
 
   -- For now, only get annotations from currently opened book
   -- TODO: check bulk-syncing possibilities
-  local current_annotations = KoInsightAnnotationReader.getCurrentBookAnnotations()
+  local current_annotations, total_pages = KoInsightAnnotationReader.getCurrentBookAnnotations()
 
   if not current_annotations or #current_annotations == 0 then
     logger.dbg("[KoInsight] No annotations to sync")
@@ -128,6 +139,7 @@ function KoInsightAnnotationReader.getAnnotationsByBook()
       chapter = annotation.chapter,
       pageno = annotation.pageno,
       page = annotation.page,
+      total_pages = total_pages, -- Add total pages at time of annotation
     }
 
     -- Include datetime_updated if it exists

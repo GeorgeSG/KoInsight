@@ -216,6 +216,7 @@ export class AnnotationsRepository {
       chapter: ka.chapter,
       pageno: ka.pageno,
       page_ref: String(ka.page),
+      total_pages: ka.total_pages,
       pos0: ka.pos0 ? JSON.stringify(ka.pos0) : undefined,
       pos1: ka.pos1 ? JSON.stringify(ka.pos1) : undefined,
       datetime: ka.datetime,
