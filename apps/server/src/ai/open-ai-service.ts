@@ -1,5 +1,5 @@
-import OpenAI from "openai";
-import { z } from "zod";
+import OpenAI from 'openai';
+import { z } from 'zod';
 
 const BookInsights = z.object({
   genres: z.array(z.string()),
@@ -30,8 +30,8 @@ function safeJsonParse(text: string): unknown {
     return JSON.parse(text);
   } catch {}
 
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
   if (start >= 0 && end > start) {
     return JSON.parse(text.slice(start, end + 1));
   }
@@ -44,22 +44,22 @@ export async function getBookInsights(bookTitle: string, bookAuthor: string) {
   if (!client) return undefined;
 
   const completion = await client.chat.completions.create({
-    model: "gpt-4o",
+    model: 'gpt-4o',
     messages: [
       {
-        role: "system",
+        role: 'system',
         content:
           'You are an expert librarian. Respond ONLY with a JSON object with fields: {"genres": string[], "summary": string}.',
       },
       {
-        role: "user",
+        role: 'user',
         content: `Give me genres and a short summary for "${bookTitle}" by ${bookAuthor}.`,
       },
     ],
-    response_format: { type: "json_object" },
+    response_format: { type: 'json_object' },
   });
 
-  const content = completion.choices[0]?.message?.content ?? "{}";
+  const content = completion.choices[0]?.message?.content ?? '{}';
   const data = safeJsonParse(content);
 
   return BookInsights.parse(data);
