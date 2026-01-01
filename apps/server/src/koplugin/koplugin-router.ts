@@ -53,7 +53,6 @@ router.post('/import', rejectOldPluginVersion, async (req, res) => {
   const koreaderBooks: KoReaderBook[] = req.body.books;
   const newPageStats: PageStat[] = req.body.stats;
   const annotations: Record<string, KoReaderAnnotation[]> = req.body.annotations || {};
-  const syncAnnotationDeletions: boolean = req.body.sync_annotation_deletions ?? true;
 
   try {
     console.debug('Importing books:', koreaderBooks);
@@ -63,14 +62,8 @@ router.post('/import', rejectOldPluginVersion, async (req, res) => {
       Object.keys(annotations).length,
       'books with annotations'
     );
-    console.debug('Sync annotation deletions:', syncAnnotationDeletions);
 
-    await UploadService.uploadStatisticData(
-      koreaderBooks,
-      newPageStats,
-      annotations,
-      syncAnnotationDeletions
-    );
+    await UploadService.uploadStatisticData(koreaderBooks, newPageStats, annotations);
     res.status(200).json({ message: 'Upload successfull' });
   } catch (err) {
     console.error(err);

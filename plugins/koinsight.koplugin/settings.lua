@@ -10,7 +10,6 @@ local Menu = require("ui/widget/menu")
 
 local KoInsightSettings = {
   server_url = nil,
-  sync_annotation_deletions = true, -- Default to enabled
 }
 KoInsightSettings.__index = KoInsightSettings
 
@@ -42,10 +41,6 @@ function KoInsightSettings:new()
   local obj = setmetatable({}, self)
   obj.settings = obj:readSettings()
   obj.server_url = obj.settings.data.koinsight.server_url
-  obj.sync_annotation_deletions = obj.settings.data.koinsight.sync_annotation_deletions
-  if obj.sync_annotation_deletions == nil then
-    obj.sync_annotation_deletions = true -- Default to enabled if not set
-  end
   return obj
 end
 
@@ -64,7 +59,6 @@ end
 function KoInsightSettings:persistSettings()
   local new_settings = {
     server_url = self.server_url,
-    sync_annotation_deletions = self.sync_annotation_deletions,
   }
 
   if not success then
@@ -218,16 +212,6 @@ function KoInsightSettings:editServerSettings()
 
   UIManager:show(self.settings_dialog)
   self.settings_dialog:onShowKeyboard()
-end
-
-function KoInsightSettings:toggleSyncDeletions()
-  self.sync_annotation_deletions = not self.sync_annotation_deletions
-  self:persistSettings()
-
-  local status = self.sync_annotation_deletions and _("enabled") or _("disabled")
-  UIManager:show(InfoMessage:new({
-    text = _("Annotation deletion sync is now ") .. status,
-  }))
 end
 
 return KoInsightSettings

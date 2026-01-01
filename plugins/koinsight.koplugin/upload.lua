@@ -48,17 +48,17 @@ function send_device_data(server_url, silent)
   end
 end
 
-function send_statistics_data(server_url, silent, sync_annotation_deletions)
+function send_statistics_data(server_url, silent)
   local url = server_url .. API_UPLOAD_LOCATION
 
   -- Get annotations from currently opened book
   local annotations = KoInsightAnnotationReader.getAnnotationsByBook()
-  
+
   local annotation_count = 0
   for _, book_annotations in pairs(annotations) do
     annotation_count = annotation_count + #book_annotations
   end
-  
+
   if annotation_count > 0 then
     logger.info("[KoInsight] Syncing", annotation_count, "annotations")
   end
@@ -67,7 +67,6 @@ function send_statistics_data(server_url, silent, sync_annotation_deletions)
     stats = KoInsightDbReader.progressData(),
     books = KoInsightDbReader.bookData(),
     annotations = annotations,
-    sync_annotation_deletions = sync_annotation_deletions,
     version = const.VERSION,
   }
 
@@ -84,12 +83,9 @@ function send_statistics_data(server_url, silent, sync_annotation_deletions)
   end
 end
 
-return function(server_url, silent, sync_annotation_deletions)
+return function(server_url, silent)
   if silent == nil then
     silent = false
-  end
-  if sync_annotation_deletions == nil then
-    sync_annotation_deletions = true -- Default to enabled
   end
   if server_url == nil or server_url == "" then
     UIManager:show(InfoMessage:new({
@@ -99,5 +95,5 @@ return function(server_url, silent, sync_annotation_deletions)
   end
 
   send_device_data(server_url, silent)
-  send_statistics_data(server_url, silent, sync_annotation_deletions)
+  send_statistics_data(server_url, silent)
 end

@@ -5,7 +5,7 @@ import { fetchFromAPI } from './api';
 export function useBookWithData(id: number) {
   // Always fetch deleted annotations so the frontend filter can control visibility
   return useSWR(
-    `books/${id}?includeDeleted=true`, 
+    `books/${id}?includeDeleted=true`,
     () => fetchFromAPI<BookWithData>(`books/${id}?includeDeleted=true`),
     {
       // Revalidate when window regains focus (user comes back from KoReader)

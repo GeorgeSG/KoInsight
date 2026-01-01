@@ -97,12 +97,7 @@ describe('UploadService - Soft Delete', () => {
         [book.md5]: syncedAnnotations,
       };
 
-      await UploadService.uploadStatisticData(
-        [koreaderBook],
-        pageStats,
-        annotationsByBook,
-        true // syncAnnotationDeletions enabled
-      );
+      await UploadService.uploadStatisticData([koreaderBook], pageStats, annotationsByBook);
 
       // Check that the missing annotation was marked as deleted
       const allAnnotations = await db('annotation')
@@ -115,7 +110,7 @@ describe('UploadService - Soft Delete', () => {
       expect(allAnnotations[2].deleted_at).toBeNull(); // page 30 - not deleted
     });
 
-    it('should not mark annotations as deleted when syncAnnotationDeletions is false', async () => {
+    it('should not mark annotations as deleted when sync includes them', async () => {
       // Create 2 annotations in the database
       await createAnnotation(db, book, device, 'highlight', {
         page_ref: '10',
@@ -141,14 +136,9 @@ describe('UploadService - Soft Delete', () => {
         [book.md5]: syncedAnnotations,
       };
 
-      await UploadService.uploadStatisticData(
-        [koreaderBook],
-        pageStats,
-        annotationsByBook,
-        false // syncAnnotationDeletions disabled
-      );
+      await UploadService.uploadStatisticData([koreaderBook], pageStats, annotationsByBook);
 
-      // Check that NO annotations were marked as deleted
+      // Check that the annotation included in sync is NOT marked as deleted
       const allAnnotations = await db('annotation').where({
         book_md5: book.md5,
         device_id: device.id,
@@ -156,7 +146,7 @@ describe('UploadService - Soft Delete', () => {
 
       expect(allAnnotations).toHaveLength(2);
       expect(allAnnotations[0].deleted_at).toBeNull();
-      expect(allAnnotations[1].deleted_at).toBeNull();
+      expect(allAnnotations[1].deleted_at).toBeTruthy(); // Not in sync = deleted
     });
 
     it('should not re-delete already deleted annotations', async () => {
@@ -177,12 +167,7 @@ describe('UploadService - Soft Delete', () => {
         [book.md5]: syncedAnnotations,
       };
 
-      await UploadService.uploadStatisticData(
-        [koreaderBook],
-        pageStats,
-        annotationsByBook,
-        true
-      );
+      await UploadService.uploadStatisticData([koreaderBook], pageStats, annotationsByBook);
 
       // Check that deleted_at timestamp didn't change
       const secondDeleted = await db('annotation').where({ id: annotation.id }).first();
@@ -211,12 +196,7 @@ describe('UploadService - Soft Delete', () => {
         [book.md5]: syncedAnnotations,
       };
 
-      await UploadService.uploadStatisticData(
-        [koreaderBook],
-        pageStats,
-        annotationsByBook,
-        true
-      );
+      await UploadService.uploadStatisticData([koreaderBook], pageStats, annotationsByBook);
 
       const allAnnotations = await db('annotation')
         .where({ book_md5: book.md5, device_id: device.id })
@@ -278,12 +258,15 @@ describe('UploadService - Soft Delete', () => {
             total_pages: 100,
           },
         ],
-        annotationsByBook,
-        true
+        annotationsByBook
       );
 
-      const book1Annotations = await db('annotation').where({ book_md5: book.md5 });
-      const book2Annotations = await db('annotation').where({ book_md5: book2.md5 });
+      const book1Annotations = await db('annotation').where({
+        book_md5: book.md5,
+      });
+      const book2Annotations = await db('annotation').where({
+        book_md5: book2.md5,
+      });
 
       expect(book1Annotations[0].deleted_at).toBeNull(); // Not deleted
       expect(book2Annotations[0].deleted_at).toBeTruthy(); // Deleted
