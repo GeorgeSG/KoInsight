@@ -11,30 +11,12 @@ describe('AnnotationsRepository - Soft Delete', () => {
   let device: Device;
 
   beforeEach(async () => {
-    await db.raw('PRAGMA foreign_keys = OFF');
-    await db('annotation').del();
-    await db('page_stat').del();
-    await db('book_device').del();
-    await db('book').del();
-    await db('device').del();
-    await db.raw('PRAGMA foreign_keys = ON');
-
     book = await createBook(db);
     device = await createDevice(db);
   });
 
-  afterEach(async () => {
-    await db.raw('PRAGMA foreign_keys = OFF');
-    await db('annotation').del();
-    await db('page_stat').del();
-    await db('book_device').del();
-    await db('book').del();
-    await db('device').del();
-    await db.raw('PRAGMA foreign_keys = ON');
-  });
-
   describe('markAsDeleted', () => {
-    it('should soft delete an annotation by setting deleted_at', async () => {
+    it('soft deletes an annotation by setting deleted_at', async () => {
       const annotation = await createAnnotation(db, book, device, 'highlight');
 
       await AnnotationsRepository.markAsDeleted(annotation.id);
@@ -44,7 +26,7 @@ describe('AnnotationsRepository - Soft Delete', () => {
       expect(updated.deleted_at).not.toBeNull();
     });
 
-    it('should return number of affected rows', async () => {
+    it('returns number of affected rows', async () => {
       const annotation = await createAnnotation(db, book, device, 'highlight');
 
       const count = await AnnotationsRepository.markAsDeleted(annotation.id);
@@ -54,7 +36,7 @@ describe('AnnotationsRepository - Soft Delete', () => {
   });
 
   describe('markManyAsDeleted', () => {
-    it('should soft delete multiple annotations by their identifiers', async () => {
+    it('soft deletes multiple annotations by their identifiers', async () => {
       const annotation1 = await createAnnotation(db, book, device, 'highlight', {
         page_ref: '10',
         datetime: '2024-01-01 10:00:00',
@@ -84,7 +66,7 @@ describe('AnnotationsRepository - Soft Delete', () => {
       expect(notDeleted.deleted_at).toBeNull();
     });
 
-    it('should not mark already deleted annotations', async () => {
+    it('does not mark already deleted annotations', async () => {
       const annotation = await createAnnotation(db, book, device, 'highlight', {
         page_ref: '10',
         datetime: '2024-01-01 10:00:00',
@@ -103,17 +85,17 @@ describe('AnnotationsRepository - Soft Delete', () => {
       await AnnotationsRepository.markManyAsDeleted(book.md5, device.id, identifiers);
 
       const secondDeleted = await db('annotation').where({ id: annotation.id }).first();
-      
+
       // deleted_at should not have changed
       expect(secondDeleted.deleted_at).toBe(firstDeletedAt);
     });
 
-    it('should return 0 when identifiers array is empty', async () => {
+    it('returns 0 when identifiers array is empty', async () => {
       const count = await AnnotationsRepository.markManyAsDeleted(book.md5, device.id, []);
       expect(count).toBe(0);
     });
 
-    it('should work within a transaction', async () => {
+    it('works within a transaction', async () => {
       const annotation = await createAnnotation(db, book, device, 'highlight', {
         page_ref: '10',
         datetime: '2024-01-01 10:00:00',
@@ -130,7 +112,7 @@ describe('AnnotationsRepository - Soft Delete', () => {
   });
 
   describe('restore', () => {
-    it('should restore a soft-deleted annotation', async () => {
+    it('restores a soft-deleted annotation', async () => {
       const annotation = await createAnnotation(db, book, device, 'highlight');
       await AnnotationsRepository.markAsDeleted(annotation.id);
 
@@ -140,7 +122,7 @@ describe('AnnotationsRepository - Soft Delete', () => {
       expect(restored.deleted_at).toBeNull();
     });
 
-    it('should return number of affected rows', async () => {
+    it('returns number of affected rows', async () => {
       const annotation = await createAnnotation(db, book, device, 'highlight');
       await AnnotationsRepository.markAsDeleted(annotation.id);
 
@@ -151,7 +133,7 @@ describe('AnnotationsRepository - Soft Delete', () => {
   });
 
   describe('getByBookMd5 with soft delete', () => {
-    it('should filter out deleted annotations by default', async () => {
+    it('filters out deleted annotations by default', async () => {
       const annotation1 = await createAnnotation(db, book, device, 'highlight');
       const annotation2 = await createAnnotation(db, book, device, 'note');
       await AnnotationsRepository.markAsDeleted(annotation2.id);
@@ -162,7 +144,7 @@ describe('AnnotationsRepository - Soft Delete', () => {
       expect(annotations[0].id).toBe(annotation1.id);
     });
 
-    it('should include deleted annotations when includeDeleted is true', async () => {
+    it('includes deleted annotations when includeDeleted is true', async () => {
       const annotation1 = await createAnnotation(db, book, device, 'highlight');
       const annotation2 = await createAnnotation(db, book, device, 'note');
       await AnnotationsRepository.markAsDeleted(annotation2.id);
@@ -172,13 +154,13 @@ describe('AnnotationsRepository - Soft Delete', () => {
       expect(annotations).toHaveLength(2);
     });
 
-    it('should filter by device and exclude deleted', async () => {
+    it('filters by device and excludes deleted', async () => {
       const device2 = await createDevice(db, { id: 'device-2', model: 'Another Device' });
-      
+
       await createAnnotation(db, book, device, 'highlight');
       const annotation2 = await createAnnotation(db, book, device, 'note');
       await createAnnotation(db, book, device2, 'bookmark');
-      
+
       await AnnotationsRepository.markAsDeleted(annotation2.id);
 
       const annotations = await AnnotationsRepository.getByBookMd5(book.md5, device.id);
@@ -189,7 +171,7 @@ describe('AnnotationsRepository - Soft Delete', () => {
   });
 
   describe('delete (hard delete)', () => {
-    it('should permanently delete an annotation', async () => {
+    it('permanently deletes an annotation', async () => {
       const annotation = await createAnnotation(db, book, device, 'highlight');
 
       await AnnotationsRepository.delete(annotation.id);
@@ -198,7 +180,7 @@ describe('AnnotationsRepository - Soft Delete', () => {
       expect(deleted).toBeUndefined();
     });
 
-    it('should work on soft-deleted annotations', async () => {
+    it('works on soft-deleted annotations', async () => {
       const annotation = await createAnnotation(db, book, device, 'highlight');
       await AnnotationsRepository.markAsDeleted(annotation.id);
 
@@ -210,15 +192,15 @@ describe('AnnotationsRepository - Soft Delete', () => {
   });
 
   describe('getCountsByType with soft delete', () => {
-    it('should exclude deleted annotations from counts', async () => {
+    it('excludes deleted annotations from counts', async () => {
       // Create 3 highlights, 2 notes, 2 bookmarks
       await createAnnotation(db, book, device, 'highlight');
       await createAnnotation(db, book, device, 'highlight');
       const deletedHighlight = await createAnnotation(db, book, device, 'highlight');
-      
+
       await createAnnotation(db, book, device, 'note');
       const deletedNote = await createAnnotation(db, book, device, 'note');
-      
+
       await createAnnotation(db, book, device, 'bookmark');
       await createAnnotation(db, book, device, 'bookmark');
 
@@ -233,7 +215,7 @@ describe('AnnotationsRepository - Soft Delete', () => {
       expect(counts.bookmark).toBe(2); // 2 - 0 deleted
     });
 
-    it('should return zero for types with all annotations deleted', async () => {
+    it('returns zero for types with all annotations deleted', async () => {
       const annotation1 = await createAnnotation(db, book, device, 'highlight');
       const annotation2 = await createAnnotation(db, book, device, 'highlight');
 
