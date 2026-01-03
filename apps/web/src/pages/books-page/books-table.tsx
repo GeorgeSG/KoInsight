@@ -1,13 +1,34 @@
-import { BookWithData } from '@koinsight/common/types';
+import { BookStatus, BookWithData } from '@koinsight/common/types';
 import { Anchor, Flex, Image, Progress, Stack, Table, Tooltip } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { IconEyeClosed } from '@tabler/icons-react';
 import { JSX } from 'react';
 import { NavLink } from 'react-router';
 import { API_URL } from '../../api/api';
+import {
+  AbandonedIcon,
+  CompletedIcon,
+  OnHoldIcon,
+  ReadingIcon,
+} from '../../components/status-icons';
 import { getBookPath } from '../../routes';
 import { formatRelativeDate, getDuration, shortDuration } from '../../utils/dates';
 import style from './books-table.module.css';
+
+const StatusIcon = ({ status }: { status: BookStatus }) => {
+  switch (status) {
+    case 'complete':
+      return <CompletedIcon size={16} />;
+    case 'reading':
+      return <ReadingIcon size={16} />;
+    case 'on_hold':
+      return <OnHoldIcon size={16} />;
+    case 'abandoned':
+      return <AbandonedIcon size={16} />;
+    default:
+      return null;
+  }
+};
 
 type BooksTableProps = {
   books: BookWithData[];
@@ -56,9 +77,12 @@ export function BooksTable({ books }: BooksTableProps): JSX.Element {
                   />
                 </Anchor>
                 <Stack gap={2} justify="center">
-                  <Anchor to={getBookPath(book.id)} component={NavLink} fw={800}>
-                    {book.title}
-                  </Anchor>
+                  <Flex align="center" gap={6}>
+                    <Anchor to={getBookPath(book.id)} component={NavLink} fw={800}>
+                      {book.title}
+                    </Anchor>
+                    {book.status && <StatusIcon status={book.status} />}
+                  </Flex>
                   <span className={style.SubTitle}>
                     {book.authors ?? 'Unknown author'}
                     {book.series !== 'N/A' ? ` · ${book.series}` : ''}

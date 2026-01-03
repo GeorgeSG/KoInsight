@@ -1,14 +1,35 @@
-import { BookWithData } from '@koinsight/common/types';
-import { Box, Group, Image, Progress, Text, Tooltip } from '@mantine/core';
+import { BookStatus, BookWithData } from '@koinsight/common/types';
+import { Box, Flex, Group, Image, Progress, Text, Tooltip } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { IconBooks, IconEyeClosed, IconProgress, IconUser } from '@tabler/icons-react';
 import C from 'clsx';
 import { JSX } from 'react';
 import { useNavigate } from 'react-router';
 import { API_URL } from '../../api/api';
+import {
+  AbandonedIcon,
+  CompletedIcon,
+  OnHoldIcon,
+  ReadingIcon,
+} from '../../components/status-icons';
 import { getBookPath } from '../../routes';
 
 import style from './books-cards.module.css';
+
+const StatusIcon = ({ status }: { status: BookStatus }) => {
+  switch (status) {
+    case 'complete':
+      return <CompletedIcon size={14} />;
+    case 'reading':
+      return <ReadingIcon size={14} />;
+    case 'on_hold':
+      return <OnHoldIcon size={14} />;
+    case 'abandoned':
+      return <AbandonedIcon size={14} />;
+    default:
+      return null;
+  }
+};
 
 type BooksCardsProps = {
   books: BookWithData[];
@@ -52,9 +73,12 @@ export function BooksCards({ books }: BooksCardsProps): JSX.Element {
             color="koinsight"
           />
           <Box px="lg" className={C(style.CardDetails, { [style.Small]: isSmallScreen })}>
-            <Text fz="md" fw={600} style={{ wordBreak: 'break-word', whiteSpace: 'wrap' }}>
-              {book.title}
-            </Text>
+            <Flex align="center" gap={6}>
+              <Text fz="md" fw={600} style={{ wordBreak: 'break-word', whiteSpace: 'wrap' }}>
+                {book.title}
+              </Text>
+              {book.status && <StatusIcon status={book.status} />}
+            </Flex>
             <Group wrap="nowrap" gap={8} mt="xs">
               <Tooltip label="Author" position="top" withArrow>
                 <IconUser stroke={1.5} size={16} />
