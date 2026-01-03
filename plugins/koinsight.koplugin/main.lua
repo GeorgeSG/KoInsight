@@ -111,7 +111,7 @@ function koinsight:addToMainMenu(menu_items)
         text = _("About KoInsight"),
         keep_menu_open = true,
         callback = function()
-          local const = require("const")
+          local const = require("./const")
           UIManager:show(InfoMessage:new({
             text = "KoInsight is a sync plugin for KoInsight instances.\n\nPlugin version: "
               .. const.VERSION
