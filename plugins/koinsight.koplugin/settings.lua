@@ -9,7 +9,8 @@ local UIManager = require("ui/uimanager")
 local Menu = require("ui/widget/menu")
 
 local KoInsightSettings = {
-  server_url = nil,
+  settings = nil, -- LuaSettings handle
+  data = nil, -- in-memory normalized table
 }
 KoInsightSettings.__index = KoInsightSettings
 
@@ -39,8 +40,17 @@ end
 
 function KoInsightSettings:new()
   local obj = setmetatable({}, self)
-  obj.settings = obj:readSettings()
-  obj.server_url = obj.settings.data.koinsight.server_url
+  obj.settings = open_settings_handle()
+  -- Safe initialization with error handling
+  local success, result = pcall(function()
+    return obj.settings:readSetting(SETTING_KEY, {}) or {}
+  end)
+  if success then
+    obj.data = result
+  else
+    logger.err("[KoInsight] Error reading settings, using defaults:", result)
+    obj.data = {}
+  end
   return obj
 end
 
@@ -56,10 +66,18 @@ function KoInsightSettings:reload()
   end
 end
 
-function KoInsightSettings:persistSettings()
-  local new_settings = {
-    server_url = self.server_url,
-  }
+function KoInsightSettings:writeData()
+  local success, error_msg = pcall(function()
+    if not self.settings then
+      logger.err("[KoInsight] No settings object available for write")
+      return false
+    end
+    logger.dbg("[KoInsight] Saving settings data:", self.data)
+    self.settings:saveSetting(SETTING_KEY, self.data)
+    self.settings:flush()
+    logger.dbg("[KoInsight] Settings saved and flushed successfully")
+    return true
+  end)
 
   if not success then
     logger.err("[KoInsight] Error writing settings:", error_msg)
@@ -212,6 +230,43 @@ function KoInsightSettings:editServerSettings()
 
   UIManager:show(self.settings_dialog)
   self.settings_dialog:onShowKeyboard()
+end
+
+function KoInsightSettings:editTimeoutDialog()
+  local current = tostring(self:getSuspendConnectTimeout())
+  self.timeout_dialog = MultiInputDialog:new({
+    title = _("Suspend connect timeout (seconds)"),
+    fields = {
+      {
+        text = current,
+        description = _("Timeout (3..60):"),
+        hint = _("10"),
+        input_type = "number",
+      },
+    },
+    buttons = {
+      {
+        {
+          text = _("Cancel"),
+          id = "close",
+          callback = function()
+            UIManager:close(self.timeout_dialog)
+          end,
+        },
+        {
+          text = _("Apply"),
+          callback = function()
+            local fields = self.timeout_dialog:getFields()
+            self:setSuspendConnectTimeout(fields[1])
+            UIManager:close(self.timeout_dialog)
+            UIManager:show(InfoMessage:new({ text = _("Timeout saved."), timeout = 2 }))
+          end,
+        },
+      },
+    },
+  })
+  UIManager:show(self.timeout_dialog)
+  self.timeout_dialog:onShowKeyboard()
 end
 
 return KoInsightSettings

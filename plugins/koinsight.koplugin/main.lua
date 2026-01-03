@@ -105,23 +105,8 @@ function koinsight:addToMainMenu(menu_items)
           self.koinsight_settings:editServerSettings()
         end,
       },
-      {
-        text = _("Synchronize data"),
-        separator = true,
-        callback = function()
-          onUpload(self.koinsight_settings.server_url, false)
-        end,
-      },
-      {
-        text = _("Sync on suspend"),
-        checked_func = function()
-          return self:getSyncOnSuspendEnabled()
-        end,
-        callback = function()
-          self:toggleSyncOnSuspend()
-        end,
-      },
 
+      -- 6) About KoInsight
       {
         text = _("About KoInsight"),
         keep_menu_open = true,
@@ -149,7 +134,7 @@ function koinsight:onDispatcherRegisterActions()
 end
 
 function koinsight:onKoInsightSync()
-  onUpload(self.koinsight_settings.server_url, false)
+  onUpload(self.koinsight_settings:getServerURL(), false)
 end
 
 -- Sync when device suspends
@@ -158,10 +143,6 @@ function koinsight:onSuspend()
     logger.dbg("[KoInsight] Sync on suspend is disabled, skipping")
     return
   end
-
-  logger.info("[KoInsight] Device suspending - syncing data")
-  self:performSyncOnSuspend()
-end
 
   logger.info("[KoInsight] Device suspending - syncing data")
 
@@ -173,9 +154,6 @@ end
   else
     self:performSyncOnSuspend()
   end
-
-  logger.info("[KoInsight] System closing - syncing data")
-  self:performSyncOnSuspend()
 end
 
 function koinsight:onPowerOff()
@@ -223,7 +201,7 @@ function koinsight:performSyncOnSuspend()
 
   -- Perform sync in a protected call to avoid crashing on suspend
   local success, error_msg = pcall(function()
-    onUpload(self.koinsight_settings.server_url, true) -- true = silent mode
+    onUpload(server_url, true) -- true = silent mode
   end)
 
   if not success then
@@ -327,91 +305,6 @@ function koinsight:isWiFiConnected()
 
   logger.dbg("[KoInsight] WiFi status - On:", result and "true" or "false")
   return result
-end
-
--- Setting management for sync on suspend toggle
-function koinsight:getSyncOnSuspendEnabled()
-  -- Safer settings access with error handling
-  local success, result = pcall(function()
-    local settings = self.koinsight_settings.settings
-    if not settings then
-      logger.dbg("[KoInsight] No settings object found")
-      return true -- default
-    end
-
-    local koinsight_data = settings:readSetting("koinsight", {})
-    if koinsight_data.sync_on_suspend == nil then
-      logger.dbg("[KoInsight] sync_on_suspend not set, defaulting to true")
-      return true
-    end
-
-    logger.dbg("[KoInsight] sync_on_suspend current value:", koinsight_data.sync_on_suspend)
-    return koinsight_data.sync_on_suspend
-  end)
-
-  if not success then
-    logger.err("[KoInsight] Error reading sync_on_suspend setting:", result)
-    return true -- safe default
-  end
-
-  return result
-end
-
-function koinsight:setSyncOnSuspendEnabled(enabled)
-  local success, error_msg = pcall(function()
-    logger.dbg("[KoInsight] Attempting to save sync_on_suspend:", enabled)
-
-    local settings = self.koinsight_settings.settings
-    if not settings then
-      logger.err("[KoInsight] No settings object available")
-      return
-    end
-
-    local current_data = settings:readSetting("koinsight", {})
-    current_data.sync_on_suspend = enabled
-
-    -- Preserve existing server_url if it exists
-    if self.koinsight_settings.server_url then
-      current_data.server_url = self.koinsight_settings.server_url
-    end
-
-    logger.dbg("[KoInsight] Saving data:", current_data)
-    settings:saveSetting("koinsight", current_data)
-    settings:flush()
-    logger.dbg("[KoInsight] Settings saved successfully")
-  end)
-
-  if not success then
-    logger.err("[KoInsight] Error saving sync_on_suspend setting:", error_msg)
-  end
-end
-
-function koinsight:toggleSyncOnSuspend()
-  local success, error_msg = pcall(function()
-    local current_state = self:getSyncOnSuspendEnabled()
-    logger.dbg("[KoInsight] Current sync_on_suspend state:", current_state)
-
-    local new_state = not current_state
-    logger.dbg("[KoInsight] Toggling to new state:", new_state)
-
-    self:setSyncOnSuspendEnabled(new_state)
-
-    local message = new_state and _("Sync on suspend enabled") or _("Sync on suspend disabled")
-    UIManager:show(InfoMessage:new({
-      text = message,
-      timeout = 2,
-    }))
-
-    logger.info("[KoInsight] Sync on suspend toggled from", current_state, "to", new_state)
-  end)
-
-  if not success then
-    logger.err("[KoInsight] Error in toggleSyncOnSuspend:", error_msg)
-    UIManager:show(InfoMessage:new({
-      text = _("Error toggling sync setting"),
-      timeout = 3,
-    }))
-  end
 end
 
 function koinsight:initMenuOrder()

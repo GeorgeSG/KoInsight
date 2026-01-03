@@ -64,7 +64,7 @@ router.post('/import', rejectOldPluginVersion, async (req, res) => {
     );
 
     await UploadService.uploadStatisticData(koreaderBooks, newPageStats, annotations);
-    res.status(200).json({ message: 'Upload successfull' });
+    res.status(200).json({ message: 'Upload successful' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error importing data' });
