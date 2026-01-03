@@ -83,7 +83,7 @@ The default maximum upload size for the `statistics.sqlite3` file is **100 MB**.
 To start seeing data in KoInsight, you need to upload your reading statistics.
 Currently, there are two ways to do this:
 
-1. **Manual upload**: Extract your `statistics.sqlite` file from KOReader and upload it using the **"Upload Statistics DB"** button in KoInsight.
+1. **Manual upload**: Extract your `statistics.sqlite` (in settings folder) file from KOReader and upload it using the **"Upload Statistics DB"** button in KoInsight.
 2. **Sync plugin**: Install and configure the KoInsight plugin in KOReader to sync your data directly.
 
 ### KOReader sync plugin
