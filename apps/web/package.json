@@ -1,6 +1,6 @@
 {
   "name": "web",
-  "version": "v0.1.4",
+  "version": "v0.2.0",
   "description": "KoInsight front-end web app",
   "type": "module",
   "license": "MIT",

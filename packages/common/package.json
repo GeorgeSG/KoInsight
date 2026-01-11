@@ -1,6 +1,6 @@
 {
   "name": "@koinsight/common",
-  "version": "v0.1.4",
+  "version": "v0.2.0",
   "private": true,
   "type": "module",
   "scripts": {

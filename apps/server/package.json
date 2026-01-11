@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "v0.1.4",
+  "version": "v0.2.0",
   "description": "KoInsight back-end server",
   "license": "MIT",
   "scripts": {
