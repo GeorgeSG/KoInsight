@@ -11,12 +11,12 @@ import { UploadService } from '../upload/upload-service';
 // Router for KoInsight koreader plugin
 const router = Router();
 
-const REQUIRED_PLUGIN_VERSION = '0.1.0';
+const REQUIRED_PLUGIN_VERSION = '0.2.0';
 
 const rejectOldPluginVersion = (req: Request, res: Response, next: NextFunction) => {
   const { version } = req.body;
 
-  if (!version || version !== '0.1.0') {
+  if (!version || version !== REQUIRED_PLUGIN_VERSION) {
     res.status(400).json({
       error: `Unsupported plugin version. Version must be ${REQUIRED_PLUGIN_VERSION}. Please update your KOReader koinsight.koplugin`,
     });
