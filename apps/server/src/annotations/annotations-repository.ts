@@ -75,7 +75,16 @@ export class AnnotationsRepository {
           .onConflict(['book_md5', 'device_id', 'page_ref', 'datetime'])
           // Only update fields that users can actually change in KoReader
           // Do NOT update pageno/total_pages - these are historical context!
-          .merge(['text', 'note', 'datetime_updated', 'chapter', 'updated_at', 'drawer', 'color']);
+          .merge([
+            'text',
+            'note',
+            'datetime_updated',
+            'chapter',
+            'updated_at',
+            'drawer',
+            'color',
+            'deleted_at',
+          ]);
       }
     };
 
