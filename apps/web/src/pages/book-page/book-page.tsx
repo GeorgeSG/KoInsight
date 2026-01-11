@@ -2,25 +2,29 @@ import {
   ActionIcon,
   Badge,
   Box,
+  Button,
   Flex,
   Group,
   Loader,
+  Menu,
   Paper,
   RingProgress,
   Stack,
   Tabs,
   Text,
   Tooltip,
+  UnstyledButton,
 } from '@mantine/core';
 import {
   IconCalendar,
+  IconChevronDown,
   IconHighlight,
   IconRefresh,
   IconSettings,
   IconTable,
 } from '@tabler/icons-react';
 import { sum } from 'ramda';
-import { JSX } from 'react';
+import { JSX, useState } from 'react';
 import { useParams } from 'react-router';
 import { useBookWithData } from '../../api/use-book-with-data';
 import { formatSecondsToHumanReadable } from '../../utils/dates';
@@ -33,6 +37,8 @@ import { BookPageRaw } from './book-page-raw';
 export function BookPage(): JSX.Element {
   const { id } = useParams() as { id: string };
   const { data: book, isLoading, mutate } = useBookWithData(Number(id));
+
+  const [tabValue, setTabValue] = useState<string | null>('calendar');
 
   const avgPerDay = book ? book.total_read_time / Object.keys(book.read_per_day).length : 0;
 
@@ -90,42 +96,71 @@ export function BookPage(): JSX.Element {
         </Paper>
       </Group>
 
-      <Flex gap="xs" justify="space-between" align="center">
-        <Group gap="xs">
-          {book.genres?.map((genre) => (
-            <Badge radius="sm" variant="outline" key={genre.id}>
-              {genre.name}
-            </Badge>
-          ))}
-        </Group>
-        <Tooltip label="Refresh book data">
-          <ActionIcon variant="subtle" onClick={() => mutate()} aria-label="Refresh book data">
-            <IconRefresh size={18} />
-          </ActionIcon>
-        </Tooltip>
-      </Flex>
+      <Group gap="xs">
+        {book.genres?.map((genre) => (
+          <Badge radius="sm" variant="outline" key={genre.id}>
+            {genre.name}
+          </Badge>
+        ))}
+      </Group>
 
-      <Tabs defaultValue="calendar">
-        <Tabs.List>
-          <Tabs.Tab value="calendar" leftSection={<IconCalendar size={16} />}>
-            Calendar
-          </Tabs.Tab>
-          <Tabs.Tab value="annotations" leftSection={<IconHighlight size={16} />}>
-            <Flex align="center" gap="xs">
-              Annotations{' '}
-              {book.annotations.length > 0 && (
-                <Badge color="gray" size="xs">
-                  {book.annotations.length}
-                </Badge>
-              )}
-            </Flex>
-          </Tabs.Tab>
-          <Tabs.Tab value="raw-values" leftSection={<IconTable size={16} />}>
-            Raw Values
-          </Tabs.Tab>
-          <Tabs.Tab value="manage" leftSection={<IconSettings size={16} />}>
-            Manage data
-          </Tabs.Tab>
+      <Tabs value={tabValue} onChange={(value) => setTabValue(value)}>
+        <Tabs.List style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <Flex>
+            <Tabs.Tab value="calendar" leftSection={<IconCalendar size={16} />}>
+              Calendar
+            </Tabs.Tab>
+            <Tabs.Tab value="annotations" leftSection={<IconHighlight size={16} />}>
+              <Flex align="center" gap="xs">
+                Annotations{' '}
+                {book.annotations.length > 0 && (
+                  <Badge color="gray" size="xs">
+                    {book.annotations.length}
+                  </Badge>
+                )}
+              </Flex>
+            </Tabs.Tab>
+            <Tabs.Tab value="manage" leftSection={<IconSettings size={16} />}>
+              Manage data
+            </Tabs.Tab>
+            {tabValue === 'raw-values' && (
+              <Tabs.Tab value="raw-values" leftSection={<IconTable size={16} />}>
+                Raw Values
+              </Tabs.Tab>
+            )}
+          </Flex>
+          <Menu position="bottom-end" withArrow>
+            <Menu.Target>
+              <UnstyledButton
+                fz={13}
+                px="md"
+                py="xs"
+                style={{ transition: 'background-color 100ms ease' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--tab-hover-color)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '';
+                }}
+              >
+                <Flex align="center" gap="xs">
+                  <span>Advanced</span>
+                  <IconChevronDown size={16} />
+                </Flex>
+              </UnstyledButton>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item
+                leftSection={<IconTable size={16} />}
+                onClick={() => setTabValue('raw-values')}
+              >
+                Raw Values
+              </Menu.Item>
+              <Menu.Item leftSection={<IconRefresh size={16} />} onClick={() => mutate()}>
+                Reload book data
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
         </Tabs.List>
 
         <Tabs.Panel value="calendar">
