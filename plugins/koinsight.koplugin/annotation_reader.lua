@@ -19,8 +19,13 @@ function KoInsightAnnotationReader.getCurrentBookMd5()
     return nil
   end
 
-  -- Use the same method as getMd5ForPath
-  return KoInsightAnnotationReader.getMd5ForPath(current_doc)
+  local DocSettings = require("docsettings")
+  local doc_settings = DocSettings:open(current_doc)
+  if not doc_settings then
+    return nil
+  end
+
+  return doc_settings:readSetting("partial_md5_checksum")
 end
 
 -- Get annotations for the currently opened book
