@@ -12,6 +12,8 @@ local Device = require("device")
 local API_UPLOAD_LOCATION = "/api/plugin/import"
 local API_DEVICE_LOCATION = "/api/plugin/device"
 
+local KoInsightUpload = {}
+
 function get_headers(body)
   local headers = {
     ["Content-Type"] = "application/json",
@@ -83,7 +85,164 @@ function send_statistics_data(server_url, silent)
   end
 end
 
-return function(server_url, silent)
+-- Send annotations for a specific book
+function send_book_annotations(server_url, book_md5, annotations, total_pages)
+  local url = server_url .. API_UPLOAD_LOCATION
+  local device_id = G_reader_settings:readSetting("device_id")
+
+  -- Clean up annotations for JSON serialization
+  local cleaned_annotations = {}
+  for _, annotation in ipairs(annotations) do
+    local cleaned = {
+      datetime = annotation.datetime,
+      drawer = annotation.drawer,
+      color = annotation.color,
+      text = annotation.text,
+      note = annotation.note,
+      chapter = annotation.chapter,
+      pageno = annotation.pageno,
+      page = annotation.page,
+      total_pages = total_pages,
+    }
+
+    if annotation.datetime_updated then
+      cleaned.datetime_updated = annotation.datetime_updated
+    end
+    if annotation.pos0 then
+      cleaned.pos0 = annotation.pos0
+    end
+    if annotation.pos1 then
+      cleaned.pos1 = annotation.pos1
+    end
+
+    table.insert(cleaned_annotations, cleaned)
+  end
+
+  -- Get the specific book from database
+  local all_books = KoInsightDbReader.bookData()
+  local book_to_send = nil
+  for _, book in ipairs(all_books) do
+    if book.md5 == book_md5 then
+      book_to_send = book
+      break
+    end
+  end
+
+  -- Create minimal payload
+  local annotations_by_book = {}
+  annotations_by_book[book_md5] = cleaned_annotations
+
+  local body = {
+    stats = {
+      {
+        page = 1,
+        start_time = os.time(),
+        duration = 0,
+        total_pages = total_pages or 1,
+        book_md5 = book_md5,
+        device_id = device_id,
+      },
+    },
+    books = book_to_send and { book_to_send } or {},
+    annotations = annotations_by_book,
+    version = const.VERSION,
+  }
+
+  body = JSON.encode(body)
+  return callApi("POST", url, get_headers(body), body)
+end
+
+-- Bulk sync all books with annotations
+function bulk_sync_all_books(server_url, progress_callback)
+  logger.info("[KoInsight] Starting bulk sync of all books")
+
+  -- Get all books with annotations from reading history
+  local books_with_annotations = KoInsightAnnotationReader.getAllBooksWithAnnotations()
+
+  if #books_with_annotations == 0 then
+    logger.info("[KoInsight] No books with annotations found")
+    if progress_callback then
+      progress_callback({
+        phase = "complete",
+        total = 0,
+        success = 0,
+        failed = 0,
+        message = "No books with annotations found",
+      })
+    end
+    return
+  end
+
+  logger.info("[KoInsight] Found", #books_with_annotations, "books to sync")
+
+  local total_books = #books_with_annotations
+  local success_count = 0
+  local failed_count = 0
+
+  -- Sync each book one by one
+  for i, book_info in ipairs(books_with_annotations) do
+    logger.info(
+      string.format(
+        "[KoInsight] Syncing book %d/%d (MD5: %s, %d annotations)",
+        i,
+        total_books,
+        book_info.md5,
+        book_info.annotation_count
+      )
+    )
+
+    -- Report progress
+    if progress_callback then
+      progress_callback({
+        phase = "syncing",
+        current = i,
+        total = total_books,
+        book_md5 = book_info.md5,
+        annotation_count = book_info.annotation_count,
+      })
+    end
+
+    -- Send annotations for this book
+    local ok, response =
+      send_book_annotations(server_url, book_info.md5, book_info.annotations, book_info.total_pages)
+
+    if ok then
+      success_count = success_count + 1
+      logger.info("[KoInsight] Successfully synced book:", book_info.md5)
+    else
+      failed_count = failed_count + 1
+      logger.err("[KoInsight] Failed to sync book:", book_info.md5)
+    end
+
+    -- Small delay between requests to avoid overwhelming the server
+    -- and to allow UI to update
+    if i < total_books then
+      UIManager:nextTick(function() end)
+    end
+  end
+
+  logger.info(
+    string.format(
+      "[KoInsight] Bulk sync complete: %d/%d books synced successfully, %d failed",
+      success_count,
+      total_books,
+      failed_count
+    )
+  )
+
+  -- Report completion
+  if progress_callback then
+    progress_callback({
+      phase = "complete",
+      total = total_books,
+      success = success_count,
+      failed = failed_count,
+    })
+  end
+end
+
+-- Main sync function (current book + stats)
+function KoInsightUpload.sync(server_url, silent)
   if silent == nil then
     silent = false
   end
@@ -97,3 +256,18 @@ return function(server_url, silent)
   send_device_data(server_url, silent)
   send_statistics_data(server_url, silent)
 end
+
+-- Bulk sync function (all books with annotations)
+function KoInsightUpload.bulkSync(server_url, progress_callback)
+  if server_url == nil or server_url == "" then
+    UIManager:show(InfoMessage:new({
+      text = _("Please configure the server URL first."),
+    }))
+    return
+  end
+
+  send_device_data(server_url, true) -- silent
+  bulk_sync_all_books(server_url, progress_callback)
+end
+
+return KoInsightUpload

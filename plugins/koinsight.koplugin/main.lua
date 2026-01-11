@@ -2,7 +2,7 @@ local _ = require("gettext")
 local Dispatcher = require("dispatcher") -- luacheck:ignore
 local InfoMessage = require("ui/widget/infomessage")
 local logger = require("logger")
-local onUpload = require("upload")
+local KoInsightUpload = require("upload")
 local UIManager = require("ui/uimanager")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local KoInsightSettings = require("settings")
@@ -29,7 +29,6 @@ function koinsight:addToMainMenu(menu_items)
       -- 1) Synchronize data
       {
         text = _("Synchronize data"),
-        separator = true, -- draws a separator line *after* this item
         callback = function()
           -- Prefer the robust helper if present…
           if self.syncNow then
@@ -47,7 +46,7 @@ function koinsight:addToMainMenu(menu_items)
           end
           NetworkMgr:runWhenOnline(function()
             local ok, err = pcall(function()
-              onUpload(url, false) -- not silent for manual trigger
+              KoInsightUpload.sync(url, false) -- not silent for manual trigger
             end)
             if ok then
               UIManager:show(InfoMessage:new({ text = _("KoInsight sync finished."), timeout = 2 }))
@@ -59,7 +58,16 @@ function koinsight:addToMainMenu(menu_items)
         end,
       },
 
-      -- 2) Sync on suspend
+      -- 2) Bulk sync all books
+      {
+        text = _("Bulk Sync All Books (may take time)"),
+        separator = true,
+        callback = function()
+          self:performBulkSync()
+        end,
+      },
+
+      -- 3) Sync on suspend
       {
         text = _("Sync on suspend"),
         checked_func = function()
@@ -70,7 +78,7 @@ function koinsight:addToMainMenu(menu_items)
         end,
       },
 
-      -- 3) Aggressive sync on suspend (auto Wi-Fi)
+      -- 4) Aggressive sync on suspend (auto Wi-Fi)
       {
         text = _("Aggressive sync on suspend (auto Wi-Fi)"),
         checked_func = function()
@@ -84,7 +92,7 @@ function koinsight:addToMainMenu(menu_items)
         end,
       },
 
-      -- 4) Set suspend connect timeout
+      -- 5) Set suspend connect timeout
       {
         text = _("Set suspend connect timeout…"),
         keep_menu_open = true,
@@ -96,7 +104,7 @@ function koinsight:addToMainMenu(menu_items)
         end,
       },
 
-      -- 5) Set server URL
+      -- 6) Set server URL
       {
         text = _("Set server URL"),
         keep_menu_open = true,
@@ -106,7 +114,7 @@ function koinsight:addToMainMenu(menu_items)
         end,
       },
 
-      -- 6) About KoInsight
+      -- 7) About KoInsight
       {
         text = _("About KoInsight"),
         keep_menu_open = true,
@@ -134,7 +142,72 @@ function koinsight:onDispatcherRegisterActions()
 end
 
 function koinsight:onKoInsightSync()
-  onUpload(self.koinsight_settings:getServerURL(), false)
+  KoInsightUpload.sync(self.koinsight_settings:getServerURL(), false)
+end
+
+-- Perform bulk sync of all books with progress UI
+function koinsight:performBulkSync()
+  local url = self.koinsight_settings:getServerURL()
+  if not url or url == "" then
+    UIManager:show(
+      InfoMessage:new({ text = _("KoInsight server URL is not configured."), timeout = 3 })
+    )
+    return
+  end
+
+  -- Show initial message
+  local progress_info = InfoMessage:new({
+    text = _("Starting bulk sync...\nScanning reading history for books with annotations."),
+  })
+  UIManager:show(progress_info)
+
+  -- Run sync in background with progress updates
+  local NetworkMgr = require("ui/network/manager")
+  NetworkMgr:runWhenOnline(function()
+    local ok, err = pcall(function()
+      KoInsightUpload.bulkSync(url, function(progress)
+        -- Update progress UI
+        if progress.phase == "syncing" then
+          UIManager:close(progress_info)
+          progress_info = InfoMessage:new({
+            text = string.format(
+              _("Bulk Sync: %d/%d books\n%d annotations for current book"),
+              progress.current,
+              progress.total,
+              progress.annotation_count
+            ),
+          })
+          UIManager:show(progress_info)
+        elseif progress.phase == "complete" then
+          UIManager:close(progress_info)
+          if progress.total == 0 then
+            UIManager:show(InfoMessage:new({
+              text = _("No books with annotations found in reading history."),
+              timeout = 3,
+            }))
+          else
+            UIManager:show(InfoMessage:new({
+              text = string.format(
+                _("Bulk sync complete!\n%d/%d books synced successfully\n%d failed"),
+                progress.success,
+                progress.total,
+                progress.failed
+              ),
+              timeout = 5,
+            }))
+          end
+        end
+      end)
+    end)
+
+    if not ok then
+      UIManager:close(progress_info)
+      logger.err("[KoInsight] Bulk sync failed: " .. tostring(err))
+      UIManager:show(
+        InfoMessage:new({ text = _("Bulk sync failed: " .. tostring(err)), timeout = 5 })
+      )
+    end
+  end)
 end
 
 -- Sync when device suspends
@@ -201,7 +274,7 @@ function koinsight:performSyncOnSuspend()
 
   -- Perform sync in a protected call to avoid crashing on suspend
   local success, error_msg = pcall(function()
-    onUpload(server_url, true) -- true = silent mode
+    KoInsightUpload.sync(server_url, true) -- true = silent mode
   end)
 
   if not success then
@@ -260,7 +333,7 @@ function koinsight:performAggressiveSyncOnSuspend()
 
     -- Perform the actual sync
     logger.info("[KoInsight] Performing sync")
-    onUpload(server_url, true) -- true = silent mode
+    KoInsightUpload.sync(server_url, true) -- true = silent mode
 
     -- Turn off WiFi if we turned it on
     if not was_wifi_on then
@@ -306,7 +379,6 @@ function koinsight:isWiFiConnected()
   logger.dbg("[KoInsight] WiFi status - On:", result and "true" or "false")
   return result
 end
-
 function koinsight:initMenuOrder()
   local menu_order_modules = {
     "ui/elements/filemanager_menu_order",
