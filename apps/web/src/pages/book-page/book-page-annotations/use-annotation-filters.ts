@@ -1,9 +1,10 @@
+import { AnnotationType } from '@koinsight/common/types';
 import {
-  useQueryState,
   parseAsArrayOf,
-  parseAsStringLiteral,
-  parseAsString,
   parseAsBoolean,
+  parseAsString,
+  parseAsStringLiteral,
+  useQueryState,
 } from 'nuqs';
 import { useCallback } from 'react';
 
@@ -17,7 +18,7 @@ export type GroupBy = (typeof GROUP_BY_OPTIONS)[number];
 export function useAnnotationFilters() {
   const [searchTerm, setSearchTerm] = useQueryState('search', parseAsString.withDefault(''));
 
-  const [types, setTypes] = useQueryState(
+  const [types, setTypes] = useQueryState<AnnotationType[]>(
     'types',
     parseAsArrayOf(parseAsStringLiteral(TYPES_OPTIONS)).withDefault([
       'highlight',
@@ -27,7 +28,7 @@ export function useAnnotationFilters() {
   );
 
   const toggleType = useCallback(
-    (type: (typeof TYPES_OPTIONS)[number]) => {
+    (type: AnnotationType) => {
       const newTypes = types.includes(type) ? types.filter((t) => t !== type) : [...types, type];
       setTypes(newTypes);
     },
@@ -39,12 +40,12 @@ export function useAnnotationFilters() {
     parseAsBoolean.withDefault(false)
   );
 
-  const [sortBy, setSortBy] = useQueryState(
+  const [sortBy, setSortBy] = useQueryState<SortBy>(
     'sortBy',
     parseAsStringLiteral(SORT_BY_OPTIONS).withDefault('newest')
   );
 
-  const [groupBy, setGroupBy] = useQueryState(
+  const [groupBy, setGroupBy] = useQueryState<GroupBy>(
     'groupBy',
     parseAsStringLiteral(GROUP_BY_OPTIONS).withDefault('none')
   );
