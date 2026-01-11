@@ -20,4 +20,5 @@ export async function seed(knex: Knex): Promise<void> {
   const devices = await Promise.all(SEED_DEVICES.map((device) => createDevice(db, device)));
 
   SEEDED_DEVICES = devices as Device[];
+  console.log(`✓ Seeded ${SEEDED_DEVICES.length} devices`);
 }

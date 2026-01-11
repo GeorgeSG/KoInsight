@@ -14,7 +14,8 @@
   "scripts": {
     "build": "turbo run build",
     "test:coverage": "turbo run test:coverage",
-    "dev": "turbo run dev --parallel"
+    "dev": "turbo run dev --parallel",
+    "seed": "npm --workspace=server run seed"
   },
   "devDependencies": {
     "prettier": "3.6.2",
