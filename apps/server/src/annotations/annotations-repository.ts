@@ -13,7 +13,6 @@ export class AnnotationsRepository {
     }
 
     const annotations = await query;
-    console.log({ query, annotations });
 
     // Parse JSON position data and expose a simple `deleted` flag for clients
     return annotations.map((a) => ({
