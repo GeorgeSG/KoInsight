@@ -139,10 +139,20 @@ function koinsight:onDispatcherRegisterActions()
     title = _("KoInsight: Sync stats"),
     general = true,
   })
+  Dispatcher:registerAction("koinsight_bulk_sync", {
+    category = "none",
+    event = "KoInsightBulkSync",
+    title = _("KoInsight: Bulk sync all books"),
+    general = true,
+  })
 end
 
 function koinsight:onKoInsightSync()
   KoInsightUpload.sync(self.koinsight_settings:getServerURL(), false)
+end
+
+function koinsight:onKoInsightBulkSync()
+  self:performBulkSync()
 end
 
 -- Perform bulk sync of all books with progress UI
