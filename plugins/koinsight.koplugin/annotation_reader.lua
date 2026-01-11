@@ -1,3 +1,6 @@
+local DocSettings = require("docsettings")
+local logger = require("logger")
+
 local KoInsightAnnotationReader = {}
 
 -- Get the currently opened document
@@ -19,7 +22,6 @@ function KoInsightAnnotationReader.getCurrentBookMd5()
     return nil
   end
 
-  local DocSettings = require("docsettings")
   local doc_settings = DocSettings:open(current_doc)
   if not doc_settings then
     return nil
@@ -30,8 +32,6 @@ end
 
 -- Get annotations for the currently opened book
 function KoInsightAnnotationReader.getCurrentBookAnnotations()
-  local logger = require("logger")
-  local DocSettings = require("docsettings")
   local current_doc = KoInsightAnnotationReader.getCurrentDocument()
 
   if not current_doc then
@@ -79,7 +79,6 @@ end
 
 -- Get annotations organized by book md5
 function KoInsightAnnotationReader.getAnnotationsByBook()
-  local logger = require("logger")
   local annotations_by_book = {}
 
   -- For now, only get annotations from currently opened book
@@ -145,9 +144,6 @@ end
 -- Extract all necessary data from a book's sidecar file in one read
 -- Returns: md5, annotations, total_pages, book_metadata (or nil if no annotations/md5)
 function KoInsightAnnotationReader.getBookDataFromSidecar(file_path)
-  local DocSettings = require("docsettings")
-  local logger = require("logger")
-
   if not file_path then
     return nil
   end
@@ -203,9 +199,6 @@ end
 
 -- Get annotations for a specific book file path
 function KoInsightAnnotationReader.getAnnotationsForBook(file_path)
-  local DocSettings = require("docsettings")
-  local logger = require("logger")
-
   if not file_path then
     logger.warn("[KoInsight] No file path provided")
     return nil, nil
@@ -234,9 +227,6 @@ end
 
 -- Get MD5 hash for a book directly from its sidecar file
 function KoInsightAnnotationReader.getMd5ForPath(file_path)
-  local DocSettings = require("docsettings")
-  local logger = require("logger")
-
   if not file_path then
     return nil
   end
@@ -261,7 +251,6 @@ end
 -- Get all books with annotations from reading history
 function KoInsightAnnotationReader.getAllBooksWithAnnotations()
   local ReadHistory = require("readhistory")
-  local logger = require("logger")
 
   logger.info("[KoInsight] Starting bulk annotation collection from reading history")
 
