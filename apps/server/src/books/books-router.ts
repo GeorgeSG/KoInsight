@@ -22,7 +22,8 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.get('/:bookId', getBookById, async (req: Request, res: Response, next: NextFunction) => {
   const book = req.book!;
-  const bookWithData = await BooksService.withData(book);
+  const includeDeleted = req.query.includeDeleted === 'true';
+  const bookWithData = await BooksService.withData(book, includeDeleted);
   res.json(bookWithData);
 });
 

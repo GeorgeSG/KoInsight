@@ -1,3 +1,4 @@
+import { KoReaderAnnotation } from '@koinsight/common/types/annotation';
 import { KoReaderBook } from '@koinsight/common/types/book';
 import { Device } from '@koinsight/common/types/device';
 import { PageStat } from '@koinsight/common/types/page-stat';
@@ -51,11 +52,18 @@ router.post('/import', rejectOldPluginVersion, async (req, res) => {
 
   const koreaderBooks: KoReaderBook[] = req.body.books;
   const newPageStats: PageStat[] = req.body.stats;
+  const annotations: Record<string, KoReaderAnnotation[]> = req.body.annotations || {};
 
   try {
     console.debug('Importing books:', koreaderBooks);
     console.debug('Importing page stats:', newPageStats);
-    await UploadService.uploadStatisticData(koreaderBooks, newPageStats);
+    console.debug(
+      'Importing annotations:',
+      Object.keys(annotations).length,
+      'books with annotations'
+    );
+
+    await UploadService.uploadStatisticData(koreaderBooks, newPageStats, annotations);
     res.status(200).json({ message: 'Upload successful' });
   } catch (err) {
     console.error(err);

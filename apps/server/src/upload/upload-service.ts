@@ -2,11 +2,13 @@ import {
   Book,
   BookDevice,
   Device,
+  KoReaderAnnotation,
   KoReaderBook,
   KoReaderPageStat,
   PageStat,
 } from '@koinsight/common/types';
 import Database, { Database as DatabaseType } from 'better-sqlite3';
+import { AnnotationsRepository } from '../annotations/annotations-repository';
 import { db } from '../knex';
 
 export class UploadService {
@@ -36,7 +38,11 @@ export class UploadService {
     return { newBooks, newPageStats };
   }
 
-  static uploadStatisticData(booksToImport: KoReaderBook[], newPageStats: PageStat[]) {
+  static uploadStatisticData(
+    booksToImport: KoReaderBook[],
+    newPageStats: PageStat[],
+    annotationsByBook?: Record<string, KoReaderAnnotation[]>
+  ) {
     return db.transaction(async (trx) => {
       // Insert books
       const newBooks: Partial<Book>[] = booksToImport.map((book) => ({
@@ -106,7 +112,63 @@ export class UploadService {
         )
       );
 
+      // Insert annotations if provided
+      if (annotationsByBook) {
+        const deviceId =
+          newPageStats.length > 0 ? newPageStats[0].device_id : this.UNKNOWN_DEVICE_ID;
+
+        await Promise.all(
+          Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
+            AnnotationsRepository.bulkInsert(bookMd5, deviceId, annotations, trx)
+          )
+        );
+
+        // Detect and mark deleted annotations
+        await Promise.all(
+          Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
+            this.detectAndMarkDeletedAnnotations(bookMd5, deviceId, annotations, trx)
+          )
+        );
+      }
+
       await trx.commit();
     });
+  }
+
+  /**
+   * Detect annotations that exist in the database but not in the sync data
+   * These annotations were deleted in KoReader and should be marked as deleted
+   *
+   * @param bookMd5 - The book's MD5 hash
+   * @param deviceId - The device ID
+   * @param syncedAnnotations - Annotations received from KoReader
+   * @param trx - Transaction to use
+   */
+  private static async detectAndMarkDeletedAnnotations(
+    bookMd5: string,
+    deviceId: string,
+    syncedAnnotations: KoReaderAnnotation[],
+    trx: any
+  ): Promise<void> {
+    // Get all existing non-deleted annotations for this book and device
+    const existingAnnotations = await trx('annotation')
+      .where({ book_md5: bookMd5, device_id: deviceId })
+      .whereNull('deleted_at')
+      .select('page_ref', 'datetime');
+
+    // Create a Set of identifiers from synced annotations for fast lookup
+    const syncedIdentifiers = new Set(syncedAnnotations.map((a) => `${a.page}|${a.datetime}`));
+
+    // Find annotations that exist in DB but not in synced data
+    const deletedAnnotations = existingAnnotations.filter(
+      (a: { page_ref: string; datetime: string }) =>
+        !syncedIdentifiers.has(`${a.page_ref}|${a.datetime}`)
+    );
+
+    if (deletedAnnotations.length > 0) {
+      console.log(`Marked ${deletedAnnotations.length} annotations as deleted for book ${bookMd5}`);
+
+      await AnnotationsRepository.markManyAsDeleted(bookMd5, deviceId, deletedAnnotations, trx);
+    }
   }
 }

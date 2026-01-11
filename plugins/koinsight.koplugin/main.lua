@@ -134,7 +134,7 @@ function koinsight:onDispatcherRegisterActions()
 end
 
 function koinsight:onKoInsightSync()
-  onUpload(self.koinsight_settings:getServerURL())
+  onUpload(self.koinsight_settings:getServerURL(), false)
 end
 
 -- Sync when device suspends
