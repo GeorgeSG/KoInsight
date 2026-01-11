@@ -18,7 +18,6 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
   });
 
   const filteredAndSortedAnnotations = useMemo(() => {
-    console.log({ annotations: book.annotations });
     let filtered = book.annotations;
 
     // Filter by type
