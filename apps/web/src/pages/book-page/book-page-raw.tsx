@@ -80,7 +80,7 @@ export function BookPageRaw({ book }: BookPageRawProps): JSX.Element {
         </Table.Thead>
         <Table.Tbody>
           {visibleEvents.map((stat) => (
-            <Table.Tr key={stat.start_time}>
+            <Table.Tr key={JSON.stringify(stat)}>
               <Table.Td>{stat.page}</Table.Td>
               <Table.Td>{formatDate(stat.start_time, 'dd LLL yyyy, HH:mm:ss')}</Table.Td>
               <Table.Td>{formatSecondsToHumanReadable(stat.duration, false)}</Table.Td>

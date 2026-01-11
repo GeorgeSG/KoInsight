@@ -1,31 +1,22 @@
-import { AnnotationType } from '@koinsight/common/types';
 import { Checkbox, Flex, Group, Select, Stack, TextInput, Tooltip } from '@mantine/core';
-import { IconArrowsDownUp, IconSearch, IconUsersGroup } from '@tabler/icons-react';
+import { IconArrowsDownUp, IconCategory, IconSearch } from '@tabler/icons-react';
 import { JSX } from 'react';
+import { GroupBy, SortBy, useAnnotationFilters } from './use-annotation-filters';
 
-export type AnnotationFilters = {
-  search: string;
-  types: AnnotationType[];
-  showDeleted: boolean;
-  sortBy: 'newest' | 'oldest' | 'page-asc' | 'page-desc';
-  groupBy: 'none' | 'type' | 'chapter';
-};
-
-type AnnotationFiltersProps = {
-  filters: AnnotationFilters;
-  onFiltersChange: (filters: AnnotationFilters) => void;
-};
-
-export function AnnotationFiltersComponent({
-  filters,
-  onFiltersChange,
-}: AnnotationFiltersProps): JSX.Element {
-  const toggleType = (type: AnnotationType) => {
-    const newTypes = filters.types.includes(type)
-      ? filters.types.filter((t) => t !== type)
-      : [...filters.types, type];
-    onFiltersChange({ ...filters, types: newTypes });
-  };
+export function AnnotationFiltersComponent(): JSX.Element {
+  const {
+    types,
+    setTypes,
+    toggleType,
+    searchTerm,
+    setSearchTerm,
+    showDeleted,
+    setShowDeleted,
+    sortBy,
+    setSortBy,
+    groupBy,
+    setGroupBy,
+  } = useAnnotationFilters();
 
   return (
     <Stack gap="md">
@@ -33,31 +24,31 @@ export function AnnotationFiltersComponent({
         <TextInput
           placeholder="Search annotations..."
           leftSection={<IconSearch size={16} />}
-          value={filters.search}
-          onChange={(e) => onFiltersChange({ ...filters, search: e.currentTarget.value })}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.currentTarget.value)}
           style={{ flex: 1 }}
         />
 
         <Group gap="md" ml="auto">
           <Checkbox
             label="Highlights"
-            checked={filters.types.includes('highlight')}
+            checked={types.includes('highlight')}
             onChange={() => toggleType('highlight')}
           />
           <Checkbox
             label="Notes"
-            checked={filters.types.includes('note')}
+            checked={types.includes('note')}
             onChange={() => toggleType('note')}
           />
           <Checkbox
             label="Bookmarks"
-            checked={filters.types.includes('bookmark')}
+            checked={types.includes('bookmark')}
             onChange={() => toggleType('bookmark')}
           />
           <Checkbox
             label="Show deleted"
-            checked={filters.showDeleted}
-            onChange={(e) => onFiltersChange({ ...filters, showDeleted: e.currentTarget.checked })}
+            checked={showDeleted}
+            onChange={(e) => setShowDeleted(e.currentTarget.checked)}
           />
         </Group>
       </Flex>
@@ -66,10 +57,8 @@ export function AnnotationFiltersComponent({
         <Tooltip label="Sort by" openDelay={1000} position="top" withArrow>
           <Select
             leftSection={<IconArrowsDownUp size={16} />}
-            value={filters.sortBy}
-            onChange={(value) =>
-              onFiltersChange({ ...filters, sortBy: value as AnnotationFilters['sortBy'] })
-            }
+            value={sortBy}
+            onChange={(value) => setSortBy(value as SortBy)}
             data={[
               { value: 'newest', label: 'Newest first' },
               { value: 'oldest', label: 'Oldest first' },
@@ -82,11 +71,9 @@ export function AnnotationFiltersComponent({
 
         <Tooltip label="Group by" openDelay={1000} position="top" withArrow>
           <Select
-            leftSection={<IconUsersGroup size={16} />}
-            value={filters.groupBy}
-            onChange={(value) =>
-              onFiltersChange({ ...filters, groupBy: value as AnnotationFilters['groupBy'] })
-            }
+            leftSection={<IconCategory size={16} />}
+            value={groupBy}
+            onChange={(value) => setGroupBy(value as GroupBy)}
             data={[
               { value: 'none', label: 'No grouping' },
               { value: 'type', label: 'By type' },
