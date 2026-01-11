@@ -64,15 +64,17 @@ export function BookCard({ book }: BookCardProps): JSX.Element {
           radius="md"
           fallbackSrc="/book-placeholder-small.png"
         />
-        <ActionIcon
-          className={style.EditIcon}
-          variant="filled"
-          color="violet"
-          size="lg"
-          radius="xl"
-        >
-          <IconPencil size={18} />
-        </ActionIcon>
+        <Tooltip label="Change cover" position="right" withArrow>
+          <ActionIcon
+            className={style.EditIcon}
+            variant="filled"
+            color="violet"
+            size="lg"
+            radius="xl"
+          >
+            <IconPencil size={18} />
+          </ActionIcon>
+        </Tooltip>
       </Box>
       <Modal
         opened={isCoverSelectorOpened}
