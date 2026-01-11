@@ -1,7 +1,13 @@
 import { BookWithData } from '@koinsight/common/types';
 import { Box, Group, Image, Progress, Text, Tooltip } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconBooks, IconEyeClosed, IconProgress, IconUser } from '@tabler/icons-react';
+import {
+  IconBooks,
+  IconEyeClosed,
+  IconHighlight,
+  IconProgress,
+  IconUser,
+} from '@tabler/icons-react';
 import C from 'clsx';
 import { JSX } from 'react';
 import { useNavigate } from 'react-router';
@@ -69,12 +75,24 @@ export function BooksCards({ books }: BooksCardsProps): JSX.Element {
                   </Tooltip>
                   <span className={style.Attribute}>{book.series}</span>
                 </Group>
+                {book.annotations.length > 0 && (
+                  <Group wrap="nowrap" gap={8}>
+                    <Tooltip
+                      label={`${book.annotations.length} imported annotations`}
+                      position="top"
+                      withArrow
+                    >
+                      <IconHighlight stroke={1.5} size={16} />
+                    </Tooltip>
+                    <span className={style.Attribute}>{book.annotations.length} annotations</span>
+                  </Group>
+                )}
                 <Group wrap="nowrap" gap={8}>
                   <Tooltip label="Pages read" position="top" withArrow>
                     <IconProgress stroke={1.5} size={16} />
                   </Tooltip>
                   <span className={style.Attribute}>
-                    {book.total_read_pages}
+                    {book.unique_read_pages}
                     &nbsp;/&nbsp;
                     {book.total_pages} pages read
                   </span>

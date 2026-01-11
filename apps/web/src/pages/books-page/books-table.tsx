@@ -1,7 +1,7 @@
 import { BookWithData } from '@koinsight/common/types';
 import { Anchor, Flex, Image, Progress, Stack, Table, Tooltip } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconEyeClosed } from '@tabler/icons-react';
+import { IconEyeClosed, IconHighlight } from '@tabler/icons-react';
 import { JSX } from 'react';
 import { NavLink } from 'react-router';
 import { API_URL } from '../../api/api';
@@ -62,20 +62,15 @@ export function BooksTable({ books }: BooksTableProps): JSX.Element {
                   <span className={style.SubTitle}>
                     {book.authors ?? 'Unknown author'}
                     {book.series !== 'N/A' ? ` · ${book.series}` : ''}
-                    {/* <Tooltip label="Highlights" withArrow>
+                  </span>
+                  {book.annotations.length > 0 && (
+                    <Tooltip label={`${book.annotations.length} imported annotations`} withArrow>
                       <Flex align="center">
                         <IconHighlight size={13} />
-                        &nbsp;{book.device_data.reduce((acc, device) => acc + device.highlights, 0)}
+                        &nbsp;{book.annotations.length}
                       </Flex>
                     </Tooltip>
-                    &nbsp;·&nbsp;
-                    <Tooltip label="Notes" withArrow>
-                      <Flex align="center">
-                        <IconNote size={13} />
-                        &nbsp;{book.device_data.reduce((acc, device) => acc + device.notes, 0)}
-                      </Flex>
-                    </Tooltip> */}
-                  </span>
+                  )}
                 </Stack>
               </Flex>
             </Table.Td>
