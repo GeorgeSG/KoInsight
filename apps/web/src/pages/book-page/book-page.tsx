@@ -1,8 +1,7 @@
+import { BookWithData } from '@koinsight/common/types';
 import {
-  ActionIcon,
   Badge,
   Box,
-  Button,
   Flex,
   Group,
   Loader,
@@ -12,12 +11,14 @@ import {
   Stack,
   Tabs,
   Text,
-  Tooltip,
   UnstyledButton,
 } from '@mantine/core';
 import {
   IconCalendar,
   IconChevronDown,
+  IconClock,
+  IconClockHour4,
+  IconFile,
   IconHighlight,
   IconRefresh,
   IconSettings,
@@ -40,13 +41,6 @@ export function BookPage(): JSX.Element {
 
   const [tabValue, setTabValue] = useState<string | null>('calendar');
 
-  const avgPerDay = book ? book.total_read_time / Object.keys(book.read_per_day).length : 0;
-
-  const bookPages =
-    book?.reference_pages ||
-    book?.device_data.reduce((acc, device) => Math.max(acc, device.pages), 0) ||
-    0;
-
   if (isLoading || !book) {
     return (
       <Flex justify="center" align="center" h="100%">
@@ -59,41 +53,7 @@ export function BookPage(): JSX.Element {
     <Stack gap="md">
       <Group justify="space-between" gap="md">
         <BookCard book={book} />
-        <Paper withBorder p="md" radius="md">
-          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-            Reading progress
-          </Text>
-          <Group align="center" justify="center" h="100%">
-            <div>
-              <RingProgress
-                label={
-                  <Text size="xs" ta="center">
-                    {book.unique_read_pages} / {bookPages}
-                  </Text>
-                }
-                sections={[
-                  {
-                    value: (book.unique_read_pages / bookPages) * 100,
-                    color: 'koinsight',
-                  },
-                ]}
-                w="100%"
-              />
-            </div>
-            <Stack align="flex-start" gap={5}>
-              <Text>Total read time: {formatSecondsToHumanReadable(book.total_read_time)}</Text>
-              <Text>Average time per day: {formatSecondsToHumanReadable(avgPerDay)}</Text>
-              <Text>Days reading: {Object.keys(book.read_per_day).length}</Text>
-              <Text>
-                Average time per page flip:{' '}
-                {book.stats.length > 0
-                  ? Math.round(sum(book.stats.map((p) => p.duration)) / book.stats.length)
-                  : 0}
-                s
-              </Text>
-            </Stack>
-          </Group>
-        </Paper>
+        <StatsCard book={book} />
       </Group>
 
       <Group gap="xs">
@@ -188,5 +148,113 @@ export function BookPage(): JSX.Element {
         </Tabs.Panel>
       </Tabs>
     </Stack>
+  );
+}
+
+function StatsCard({ book }: { book: BookWithData }): JSX.Element {
+  const bookPages =
+    book?.reference_pages ||
+    book?.device_data.reduce((acc, device) => Math.max(acc, device.pages), 0) ||
+    0;
+
+  const avgPerDay = book ? book.total_read_time / Object.keys(book.read_per_day).length : 0;
+
+  return (
+    <Paper
+      withBorder
+      px="lg"
+      py="md"
+      radius="md"
+      style={{
+        background:
+          'linear-gradient(135deg, var(--mantine-color-default) 0%, var(--mantine-color-body) 100%)',
+      }}
+    >
+      <Stack gap={0} align="center">
+        <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
+          Reading progress
+        </Text>
+        <Group align="center" justify="space-between" wrap="nowrap">
+          <Stack align="center" gap="xs">
+            <RingProgress
+              size={180}
+              thickness={9}
+              roundCaps
+              label={
+                <Stack gap={0} align="center">
+                  <Text size="xl" fw={700} ta="center">
+                    {Math.round((book.unique_read_pages / bookPages) * 100)}%
+                  </Text>
+                  <Text size="xs" c="dimmed" ta="center" fw="bold">
+                    {book.unique_read_pages} / {bookPages} <br /> pages read
+                  </Text>
+                </Stack>
+              }
+              sections={[
+                {
+                  value: (book.unique_read_pages / bookPages) * 100,
+                  color: 'koinsight',
+                },
+              ]}
+            />
+          </Stack>
+
+          <Stack gap="md" flex={1}>
+            <Group gap="sm" wrap="nowrap">
+              <IconClock size={18} style={{ flexShrink: 0, opacity: 0.6 }} />
+              <Stack gap={0}>
+                <Text fz={11} c="dimmed" lh={1.2} tt="uppercase" fw="bold">
+                  Total read time
+                </Text>
+                <Text size="md" fw={600}>
+                  {formatSecondsToHumanReadable(book.total_read_time)}
+                </Text>
+              </Stack>
+            </Group>
+
+            <Group gap="sm" wrap="nowrap">
+              <IconClockHour4 size={18} style={{ flexShrink: 0, opacity: 0.6 }} />
+              <Stack gap={0}>
+                <Text fz={11} c="dimmed" lh={1.2} tt="uppercase" fw="bold">
+                  Average per day
+                </Text>
+                <Text size="md" fw={600}>
+                  {formatSecondsToHumanReadable(avgPerDay)}
+                </Text>
+              </Stack>
+            </Group>
+          </Stack>
+
+          <Stack gap="md" flex={1}>
+            <Group gap="sm" wrap="nowrap">
+              <IconCalendar size={18} style={{ flexShrink: 0, opacity: 0.6 }} />
+              <Stack gap={0}>
+                <Text fz={11} c="dimmed" lh={1.2} tt="uppercase" fw="bold">
+                  Days reading
+                </Text>
+                <Text size="md" fw={600}>
+                  {Object.keys(book.read_per_day).length}
+                </Text>
+              </Stack>
+            </Group>
+
+            <Group gap="sm" wrap="nowrap">
+              <IconFile size={18} style={{ flexShrink: 0, opacity: 0.6 }} />
+              <Stack gap={0}>
+                <Text fz={11} c="dimmed" lh={1.2} tt="uppercase" fw="bold">
+                  Avg time per page
+                </Text>
+                <Text size="md" fw={600}>
+                  {book.stats.length > 0
+                    ? Math.round(sum(book.stats.map((p) => p.duration)) / book.stats.length)
+                    : 0}
+                  s
+                </Text>
+              </Stack>
+            </Group>
+          </Stack>
+        </Group>
+      </Stack>
+    </Paper>
   );
 }
