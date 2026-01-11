@@ -23,6 +23,7 @@
 # Features
 
 - 📈 Interactive dashboard with charts and insights
+- ✏️ Highlights sync
 - 🔄 KOReader plugin for syncing reading stats
 - 📱 Multi-device support
 - 📤 Manual .sqlite upload supported
