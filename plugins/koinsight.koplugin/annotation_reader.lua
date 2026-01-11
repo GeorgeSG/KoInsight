@@ -95,10 +95,21 @@ function KoInsightAnnotationReader.getAnnotationsByBook()
   end
 
   -- Clean up annotations for JSON serialization
-  local cleaned_annotations = {}
-  for _, annotation in ipairs(current_annotations) do
-    -- Only include fields that are needed
-    local cleaned = {
+  local cleaned_annotations =
+    KoInsightAnnotationReader.cleanAnnotations(current_annotations, total_pages)
+
+  annotations_by_book[book_md5] = cleaned_annotations
+  logger.info("[KoInsight] Prepared", #cleaned_annotations, "annotations for book", book_md5)
+
+  return annotations_by_book
+end
+
+-- Clean annotations for JSON serialization
+-- Removes unnecessary fields and formats data for server
+function KoInsightAnnotationReader.cleanAnnotations(annotations, total_pages)
+  local cleaned = {}
+  for _, annotation in ipairs(annotations) do
+    local cleaned_annotation = {
       datetime = annotation.datetime,
       drawer = annotation.drawer,
       color = annotation.color,
@@ -107,29 +118,23 @@ function KoInsightAnnotationReader.getAnnotationsByBook()
       chapter = annotation.chapter,
       pageno = annotation.pageno,
       page = annotation.page,
-      total_pages = total_pages, -- Current document total pages (captured at sync time)
+      total_pages = total_pages,
     }
 
-    -- Include datetime_updated if it exists
+    -- Include optional fields if present
     if annotation.datetime_updated then
-      cleaned.datetime_updated = annotation.datetime_updated
+      cleaned_annotation.datetime_updated = annotation.datetime_updated
     end
-
-    -- Include position data for highlights (not bookmarks)
     if annotation.pos0 then
-      cleaned.pos0 = annotation.pos0
+      cleaned_annotation.pos0 = annotation.pos0
     end
     if annotation.pos1 then
-      cleaned.pos1 = annotation.pos1
+      cleaned_annotation.pos1 = annotation.pos1
     end
 
-    table.insert(cleaned_annotations, cleaned)
+    table.insert(cleaned, cleaned_annotation)
   end
-
-  annotations_by_book[book_md5] = cleaned_annotations
-  logger.info("[KoInsight] Prepared", #cleaned_annotations, "annotations for book", book_md5)
-
-  return annotations_by_book
+  return cleaned
 end
 
 -- Extract all necessary data from a book's sidecar file in one read
