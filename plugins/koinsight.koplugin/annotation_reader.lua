@@ -258,6 +258,16 @@ function KoInsightAnnotationReader.getAllBooksWithAnnotations()
 
   logger.info("[KoInsight] Starting bulk annotation collection from reading history")
 
+  -- Force flush currently open book settings to disk first
+  -- Only needed if the user is currently in a book, other books should already
+  -- have been flushed settings
+  local ReaderUI = require("apps/reader/readerui")
+  local ui = ReaderUI.instance
+  if ui and ui.doc_settings then
+    logger.dbg("[KoInsight] Flushing currently open book's doc settings to disk")
+    ui.doc_settings:flush()
+  end
+
   if not ReadHistory.hist or #ReadHistory.hist == 0 then
     logger.info("[KoInsight] No books found in reading history")
     return {}
