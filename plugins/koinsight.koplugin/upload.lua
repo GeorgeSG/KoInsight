@@ -86,45 +86,25 @@ function send_statistics_data(server_url, silent)
 end
 
 -- Send annotations for a specific book
-function send_book_annotations(server_url, book_md5, annotations, total_pages)
+function send_book_annotations(server_url, book_md5, annotations, total_pages, book_metadata)
   local url = server_url .. API_UPLOAD_LOCATION
   local device_id = G_reader_settings:readSetting("device_id")
 
   -- Clean up annotations for JSON serialization
-  local cleaned_annotations = {}
-  for _, annotation in ipairs(annotations) do
-    local cleaned = {
-      datetime = annotation.datetime,
-      drawer = annotation.drawer,
-      color = annotation.color,
-      text = annotation.text,
-      note = annotation.note,
-      chapter = annotation.chapter,
-      pageno = annotation.pageno,
-      page = annotation.page,
-      total_pages = total_pages,
-    }
+  local cleaned_annotations = KoInsightAnnotationReader.cleanAnnotations(annotations, total_pages)
 
-    if annotation.datetime_updated then
-      cleaned.datetime_updated = annotation.datetime_updated
-    end
-    if annotation.pos0 then
-      cleaned.pos0 = annotation.pos0
-    end
-    if annotation.pos1 then
-      cleaned.pos1 = annotation.pos1
-    end
+  -- Use provided book metadata instead of querying database
+  -- This allows bulk sync to work even if book isn't in statistics DB yet
+  local book_to_send = book_metadata
 
-    table.insert(cleaned_annotations, cleaned)
-  end
-
-  -- Get the specific book from database
-  local all_books = KoInsightDbReader.bookData()
-  local book_to_send = nil
-  for _, book in ipairs(all_books) do
-    if book.md5 == book_md5 then
-      book_to_send = book
-      break
+  -- Fallback: try to get from statistics database if metadata not provided
+  if not book_to_send then
+    local all_books = KoInsightDbReader.bookData()
+    for _, book in ipairs(all_books) do
+      if book.md5 == book_md5 then
+        book_to_send = book
+        break
+      end
     end
   end
 
@@ -203,8 +183,13 @@ function bulk_sync_all_books(server_url, progress_callback)
     end
 
     -- Send annotations for this book
-    local ok, response =
-      send_book_annotations(server_url, book_info.md5, book_info.annotations, book_info.total_pages)
+    local ok, response = send_book_annotations(
+      server_url,
+      book_info.md5,
+      book_info.annotations,
+      book_info.total_pages,
+      book_info.book_metadata -- Pass metadata from sidecar
+    )
 
     if ok then
       success_count = success_count + 1

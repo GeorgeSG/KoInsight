@@ -132,6 +132,65 @@ function KoInsightAnnotationReader.getAnnotationsByBook()
   return annotations_by_book
 end
 
+-- Extract all necessary data from a book's sidecar file in one read
+-- Returns: md5, annotations, total_pages, book_metadata (or nil if no annotations/md5)
+function KoInsightAnnotationReader.getBookDataFromSidecar(file_path)
+  local DocSettings = require("docsettings")
+  local logger = require("logger")
+
+  if not file_path then
+    return nil
+  end
+
+  local doc_settings = DocSettings:open(file_path)
+  if not doc_settings then
+    return nil
+  end
+
+  -- Check if book has annotations first
+  local annotations = doc_settings:readSetting("annotations")
+  if not annotations or #annotations == 0 then
+    return nil
+  end
+
+  -- Get MD5
+  local md5 = doc_settings:readSetting("partial_md5_checksum")
+  if not md5 then
+    logger.warn("[KoInsight] No MD5 found in sidecar for:", file_path)
+    return nil
+  end
+
+  -- Get total pages
+  local total_pages = doc_settings:readSetting("doc_pages")
+
+  -- Extract book metadata from sidecar
+  local doc_props = doc_settings:readSetting("doc_props")
+  local stats = doc_settings:readSetting("stats")
+  local summary = doc_settings:readSetting("summary")
+  local percent_finished = doc_settings:readSetting("percent_finished")
+
+  local book_metadata = {
+    md5 = md5,
+    title = (doc_props and doc_props.title) or "Unknown",
+    authors = (doc_props and doc_props.authors) or "Unknown",
+    series = doc_props and doc_props.series,
+    language = doc_props and doc_props.language,
+    pages = total_pages or 0,
+    highlights = (stats and stats.highlights) or 0,
+    notes = (stats and stats.notes) or 0,
+    last_open = (summary and summary.modified) or os.time(),
+    total_read_time = 0,
+    total_read_pages = 0,
+  }
+
+  -- Calculate read pages from percent_finished
+  if percent_finished and total_pages then
+    book_metadata.total_read_pages = math.floor(total_pages * percent_finished)
+  end
+
+  return md5, annotations, total_pages, book_metadata
+end
+
 -- Get annotations for a specific book file path
 function KoInsightAnnotationReader.getAnnotationsForBook(file_path)
   local DocSettings = require("docsettings")
@@ -229,37 +288,31 @@ function KoInsightAnnotationReader.getAllBooksWithAnnotations()
       goto continue
     end
 
-    -- Try to get annotations for this book
-    local success, annotations, total_pages =
-      pcall(KoInsightAnnotationReader.getAnnotationsForBook, file_path)
+    -- Get all book data in one sidecar read
+    local success, md5, annotations, total_pages, book_metadata =
+      pcall(KoInsightAnnotationReader.getBookDataFromSidecar, file_path)
 
     if not success then
-      logger.warn("[KoInsight] Error reading annotations for:", file_path)
+      logger.warn("[KoInsight] Error reading sidecar for:", file_path)
       error_count = error_count + 1
       goto continue
     end
 
-    if not annotations or #annotations == 0 then
+    -- Skip books without annotations or MD5
+    if not md5 or not annotations then
       skipped_count = skipped_count + 1
       goto continue
     end
 
-    -- Get MD5 for this book
-    local book_md5 = KoInsightAnnotationReader.getMd5ForPath(file_path)
-
-    if book_md5 then
-      table.insert(books_with_annotations, {
-        md5 = book_md5,
-        file_path = file_path,
-        annotations = annotations,
-        total_pages = total_pages,
-        annotation_count = #annotations,
-      })
-      logger.info("[KoInsight] Collected", #annotations, "annotations for MD5:", book_md5)
-    else
-      logger.warn("[KoInsight] Book has annotations but no MD5 found:", file_path)
-      skipped_count = skipped_count + 1
-    end
+    table.insert(books_with_annotations, {
+      md5 = md5,
+      file_path = file_path,
+      annotations = annotations,
+      total_pages = total_pages,
+      annotation_count = #annotations,
+      book_metadata = book_metadata,
+    })
+    logger.info("[KoInsight] Collected", #annotations, "annotations for:", book_metadata.title)
 
     ::continue::
   end
