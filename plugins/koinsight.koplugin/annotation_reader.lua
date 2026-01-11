@@ -14,13 +14,46 @@ end
 
 -- Get the MD5 hash for the currently open document
 function KoInsightAnnotationReader.getCurrentBookMd5()
+  local logger = require("logger")
   local current_doc = KoInsightAnnotationReader.getCurrentDocument()
   if not current_doc then
     return nil
   end
 
-  -- Use the same method as getMd5ForPath
-  return KoInsightAnnotationReader.getMd5ForPath(current_doc)
+  -- Get document info from ReaderUI
+  local ReaderUI = require("apps/reader/readerui")
+  local ui = ReaderUI.instance
+
+  if ui and ui.document and ui.document.info then
+    local doc_props = ui.document:getProps()
+    if doc_props and doc_props.title then
+      -- Try to find book by title in statistics database
+      local SQ3 = require("lua-ljsqlite3/init")
+      local DataStorage = require("datastorage")
+      local db_location = DataStorage:getSettingsDir() .. "/statistics.sqlite3"
+
+      local conn = SQ3.open(db_location)
+
+      -- Escape single quotes in title for SQL
+      local safe_title = doc_props.title:gsub("'", "''")
+      local query = string.format("SELECT md5 FROM book WHERE title = '%s'", safe_title)
+
+      logger.dbg("[KoInsight] Looking for book with title:", doc_props.title)
+
+      local result, rows = conn:exec(query)
+      conn:close()
+
+      if rows > 0 and result[1] and result[1][1] then
+        local md5 = result[1][1]
+        logger.info("[KoInsight] Found MD5 for current book:", md5)
+        return md5
+      else
+        logger.warn("[KoInsight] Book not found in statistics database:", doc_props.title)
+      end
+    end
+  end
+
+  return nil
 end
 
 -- Get annotations for the currently opened book
@@ -163,8 +196,10 @@ function KoInsightAnnotationReader.getAnnotationsForBook(file_path)
   return annotations, total_pages
 end
 
--- Get MD5 hash for a book directly from its sidecar file
+-- Get MD5 hash for a book by matching its title with the statistics database
 function KoInsightAnnotationReader.getMd5ForPath(file_path)
+  local SQ3 = require("lua-ljsqlite3/init")
+  local DataStorage = require("datastorage")
   local DocSettings = require("docsettings")
   local logger = require("logger")
 
@@ -172,21 +207,48 @@ function KoInsightAnnotationReader.getMd5ForPath(file_path)
     return nil
   end
 
+  -- Get the book's title from its sidecar file
   local doc_settings = DocSettings:open(file_path)
   if not doc_settings then
     return nil
   end
 
-  -- Read MD5 directly from sidecar file
-  local md5 = doc_settings:readSetting("partial_md5_checksum")
-
-  if md5 then
-    logger.dbg("[KoInsight] Found MD5 in sidecar:", md5)
-  else
-    logger.warn("[KoInsight] No MD5 checksum found in sidecar for:", file_path)
+  local doc_props = doc_settings:readSetting("doc_props")
+  if not doc_props or not doc_props.title then
+    return nil
   end
 
-  return md5
+  local book_title = doc_props.title
+  logger.dbg("[KoInsight] Looking for MD5 for book:", book_title)
+
+  -- Query statistics database for matching title
+  local db_location = DataStorage:getSettingsDir() .. "/statistics.sqlite3"
+  local conn = SQ3.open(db_location)
+  local query = "SELECT md5, title FROM book"
+  local result, rows = conn:exec(query)
+  conn:close()
+
+  if rows == 0 then
+    return nil
+  end
+
+  -- Try exact match first, then case-insensitive
+  local lower_title = book_title:lower()
+  for i = 1, rows do
+    local md5 = result[1][i]
+    local db_title = result[2][i]
+
+    if db_title == book_title then
+      logger.dbg("[KoInsight] Found MD5 via exact match:", md5)
+      return md5
+    elseif db_title and db_title:lower() == lower_title then
+      logger.dbg("[KoInsight] Found MD5 via case-insensitive match:", md5)
+      return md5
+    end
+  end
+
+  logger.warn("[KoInsight] Could not find MD5 for book:", book_title)
+  return nil
 end
 
 -- Get all books with annotations from reading history
