@@ -4,7 +4,7 @@ const router = Router();
 
 router.get('/', async (_: Request, res: Response) => {
   const devices = await DeviceRepository.getAll();
-  res.json(devices);
+  res.status(200).json(devices);
 });
 
 export { router as devicesRouter };
