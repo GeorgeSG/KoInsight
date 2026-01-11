@@ -72,7 +72,7 @@ export class BooksService {
     const genres = await GenreRepository.getByBookMd5(book.md5);
 
     // Get annotations data
-    const annotations = await AnnotationsRepository.getByBookMd5(book.md5, undefined, includeDeleted);
+    const annotations = await AnnotationsRepository.getByBookMd5(book.md5);
     const annotationCounts = await AnnotationsRepository.getCountsByType(book.md5);
     const deletedCount = await AnnotationsRepository.getDeletedCount(book.md5);
 

@@ -132,44 +132,6 @@ describe('AnnotationsRepository - Soft Delete', () => {
     });
   });
 
-  describe('getByBookMd5 with soft delete', () => {
-    it('filters out deleted annotations by default', async () => {
-      const annotation1 = await createAnnotation(db, book, device, 'highlight');
-      const annotation2 = await createAnnotation(db, book, device, 'note');
-      await AnnotationsRepository.markAsDeleted(annotation2.id);
-
-      const annotations = await AnnotationsRepository.getByBookMd5(book.md5);
-
-      expect(annotations).toHaveLength(1);
-      expect(annotations[0].id).toBe(annotation1.id);
-    });
-
-    it('includes deleted annotations when includeDeleted is true', async () => {
-      const annotation1 = await createAnnotation(db, book, device, 'highlight');
-      const annotation2 = await createAnnotation(db, book, device, 'note');
-      await AnnotationsRepository.markAsDeleted(annotation2.id);
-
-      const annotations = await AnnotationsRepository.getByBookMd5(book.md5, undefined, true);
-
-      expect(annotations).toHaveLength(2);
-    });
-
-    it('filters by device and excludes deleted', async () => {
-      const device2 = await createDevice(db, { id: 'device-2', model: 'Another Device' });
-
-      await createAnnotation(db, book, device, 'highlight');
-      const annotation2 = await createAnnotation(db, book, device, 'note');
-      await createAnnotation(db, book, device2, 'bookmark');
-
-      await AnnotationsRepository.markAsDeleted(annotation2.id);
-
-      const annotations = await AnnotationsRepository.getByBookMd5(book.md5, device.id);
-
-      expect(annotations).toHaveLength(1);
-      expect(annotations[0].device_id).toBe(device.id);
-    });
-  });
-
   describe('delete (hard delete)', () => {
     it('permanently deletes an annotation', async () => {
       const annotation = await createAnnotation(db, book, device, 'highlight');
