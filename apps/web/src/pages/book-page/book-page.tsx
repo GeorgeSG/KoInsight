@@ -15,7 +15,6 @@ import {
 import {
   IconCalendar,
   IconHighlight,
-  IconPhoto,
   IconRefresh,
   IconSettings,
   IconTable,
@@ -28,7 +27,6 @@ import { formatSecondsToHumanReadable } from '../../utils/dates';
 import { BookCard } from './book-card';
 import { BookPageAnnotations } from './book-page-annotations';
 import { BookPageCalendar } from './book-page-calendar';
-import { BookPageCoverSelector } from './book-page-cover-selector';
 import { BookPageManage } from './book-page-manage/book-page-manage';
 import { BookPageRaw } from './book-page-raw';
 
@@ -82,7 +80,10 @@ export function BookPage(): JSX.Element {
               <Text>Days reading: {Object.keys(book.read_per_day).length}</Text>
               <Text>
                 Average time per page flip:{' '}
-                {Math.round(sum(book.stats.map((p) => p.duration)) / book.stats.length)}s
+                {book.stats.length > 0
+                  ? Math.round(sum(book.stats.map((p) => p.duration)) / book.stats.length)
+                  : 0}
+                s
               </Text>
             </Stack>
           </Group>
@@ -122,9 +123,6 @@ export function BookPage(): JSX.Element {
           <Tabs.Tab value="raw-values" leftSection={<IconTable size={16} />}>
             Raw Values
           </Tabs.Tab>
-          <Tabs.Tab value="cover-selector" leftSection={<IconPhoto size={16} />}>
-            Cover Selector
-          </Tabs.Tab>
           <Tabs.Tab value="manage" leftSection={<IconSettings size={16} />}>
             Manage data
           </Tabs.Tab>
@@ -148,11 +146,6 @@ export function BookPage(): JSX.Element {
           </Box>
         </Tabs.Panel>
 
-        <Tabs.Panel value="cover-selector">
-          <Box py={20}>
-            <BookPageCoverSelector book={book} />
-          </Box>
-        </Tabs.Panel>
         <Tabs.Panel value="manage">
           <Box py={20}>
             <BookPageManage book={book} />
