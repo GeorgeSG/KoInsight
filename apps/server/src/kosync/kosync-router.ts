@@ -125,7 +125,7 @@ router.put('/syncs/progress', authenticate, async (req: Request, res: Response) 
  * "expected_status" : [200, 401]
  */
 router.get('/syncs/progress/:document', authenticate, async (req: Request, res: Response) => {
-  const { document } = req.params;
+  const document = req.params.document as string;
   const user = req.user;
 
   if (!user) {
