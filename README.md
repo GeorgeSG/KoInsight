@@ -73,8 +73,16 @@ services:
 Run `docker compose up -d`.
 
 # Configuration
+KoInsight can be configured using the following environment variables:
 
-The default maximum upload size for the `statistics.sqlite3` file is **100 MB**. This limit can be modified by setting the `MAX_FILE_SIZE_MB` environment variable.
+- `HOSTNAME`: The hostname or IP address where the server will listen.<br>
+  *Default:* `localhost`
+- `PORT`: The port number for the web server.<br>
+  *Default:* `3000`
+- `MAX_FILE_SIZE_MB`: Maximum allowed size (in megabytes) for uploaded files.<br>
+  *Default:* `100`
+- `DATA_PATH`: Path to the directory where KoInsight data (such as stats or uploads) will be stored.<br>
+  *Default:* `../../../data` or `/app/data` in Docker.
 
 # Usage
 
