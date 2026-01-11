@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import { unlinkSync } from 'fs';
 import multer from 'multer';
+import path from 'path';
 import { appConfig } from '../config';
 import { UploadService } from './upload-service';
+import { createClient } from 'webdav';
+import { createWriteStream } from "fs";
+import { pipeline } from "stream/promises";
 
 const storage = multer.diskStorage({
   destination: (_req, _res, cb) => {
@@ -27,6 +31,29 @@ const upload = multer({
 
 const router = Router();
 
+async function processDbFile(filePath: string, res: any) {
+  let db;
+  try {
+    db = UploadService.openStatisticsDbFile(filePath);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: "Invalid SQLite file or no books found" });
+    return;
+  }
+
+  try {
+    const { newBooks, newPageStats } = UploadService.extractDataFromStatisticsDb(db);
+    await UploadService.uploadStatisticData(newBooks, newPageStats);
+    res.json({ message: "Database imported successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to import database" });
+  } finally {
+    db.close();
+    unlinkSync(filePath);
+  }
+}
+
 router.post('/', upload.single('file'), async (req, res, next) => {
   const uploadedFilePath = req.file?.path;
 
@@ -35,27 +62,40 @@ router.post('/', upload.single('file'), async (req, res, next) => {
     next();
     return;
   }
+  await processDbFile(uploadedFilePath, res);
+});
 
-  let db;
-  try {
-    db = UploadService.openStatisticsDbFile(uploadedFilePath);
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: 'Invalid SQLite file or no books found' });
-    return;
+
+router.post('/from-webdav', async (req, res) => {
+  const { url, folder, username, password } = req.body ?? {};
+
+  if (!url) {
+    return res.status(400).json({ error: 'Missing url' });
   }
+  
+  const webdavClient = createClient(url, {
+    username,
+    password,
+  });
+
+  const localPath = path.join(appConfig.dataPath, appConfig.upload.filename);
 
   try {
-    const { newBooks, newPageStats } = UploadService.extractDataFromStatisticsDb(db);
-    await UploadService.uploadStatisticData(newBooks, newPageStats);
+    const sqlPath = folder?.trim() ? `/${folder.replace(/^\/+|\/+$/g, '')}/statistics.sqlite3` : '/statistics.sqlite3';
+    const readStream = await webdavClient.createReadStream(sqlPath);
+    const writeStream = createWriteStream(localPath);
+    await pipeline(readStream, writeStream);
 
-    res.json({ message: 'Database imported successfully' });
+    await processDbFile(localPath, res);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to import database' });
-  } finally {
-    db.close();
-    unlinkSync(uploadedFilePath);
+    try {
+      unlinkSync(localPath);
+    } catch {}
+
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to import database from WebDAV' });
+    }
   }
 });
 

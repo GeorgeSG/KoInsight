@@ -30,6 +30,7 @@
     "openai": "6.5.0",
     "ramda": "0.31.1",
     "sqlite3": "^5.1.7",
+    "webdav": "^5.8.0",
     "zod": "4.1.12"
   },
   "devDependencies": {
