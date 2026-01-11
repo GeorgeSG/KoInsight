@@ -83,14 +83,6 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
     return groups;
   }, [filteredAndSortedAnnotations, filters.groupBy]);
 
-  const renderAnnotationsList = (annotations: Annotation[]) => (
-    <Stack gap="md">
-      {annotations.map((annotation) => (
-        <AnnotationCard key={annotation.id} annotation={annotation} />
-      ))}
-    </Stack>
-  );
-
   return (
     <Stack gap="lg">
       <Box>
@@ -113,7 +105,7 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
           No annotations found with the current filters.
         </Text>
       ) : filters.groupBy === 'none' ? (
-        renderAnnotationsList(filteredAndSortedAnnotations)
+        <AnnotationsList annotations={filteredAndSortedAnnotations} />
       ) : (
         <Accordion variant="separated">
           {Object.entries(groupedAnnotations).map(([groupName, annotations]) => (
@@ -123,11 +115,23 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
                   {groupName} ({annotations.length})
                 </Text>
               </Accordion.Control>
-              <Accordion.Panel>{renderAnnotationsList(annotations)}</Accordion.Panel>
+              <Accordion.Panel>
+                <AnnotationsList annotations={annotations} />
+              </Accordion.Panel>
             </Accordion.Item>
           ))}
         </Accordion>
       )}
+    </Stack>
+  );
+}
+
+function AnnotationsList({ annotations }: { annotations: Annotation[] }) {
+  return (
+    <Stack gap="md">
+      {annotations.map((annotation) => (
+        <AnnotationCard key={annotation.id} annotation={annotation} />
+      ))}
     </Stack>
   );
 }

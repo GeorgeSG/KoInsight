@@ -12,7 +12,14 @@ import {
   Text,
   Tooltip,
 } from '@mantine/core';
-import { IconCalendar, IconHighlight, IconPhoto, IconRefresh, IconSettings, IconTable } from '@tabler/icons-react';
+import {
+  IconCalendar,
+  IconHighlight,
+  IconPhoto,
+  IconRefresh,
+  IconSettings,
+  IconTable,
+} from '@tabler/icons-react';
 import { sum } from 'ramda';
 import { JSX } from 'react';
 import { useParams } from 'react-router';
@@ -91,11 +98,7 @@ export function BookPage(): JSX.Element {
           ))}
         </Group>
         <Tooltip label="Refresh book data">
-          <ActionIcon 
-            variant="subtle" 
-            onClick={() => mutate()}
-            aria-label="Refresh book data"
-          >
+          <ActionIcon variant="subtle" onClick={() => mutate()} aria-label="Refresh book data">
             <IconRefresh size={18} />
           </ActionIcon>
         </Tooltip>
@@ -107,7 +110,14 @@ export function BookPage(): JSX.Element {
             Calendar
           </Tabs.Tab>
           <Tabs.Tab value="annotations" leftSection={<IconHighlight size={16} />}>
-            Annotations
+            <Flex align="center" gap="xs">
+              Annotations{' '}
+              {book.annotations.length > 0 && (
+                <Badge color="gray" size="xs">
+                  {book.annotations.length}
+                </Badge>
+              )}
+            </Flex>
           </Tabs.Tab>
           <Tabs.Tab value="raw-values" leftSection={<IconTable size={16} />}>
             Raw Values
