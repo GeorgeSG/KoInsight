@@ -4,23 +4,16 @@ import { db } from '../knex';
 export class AnnotationsRepository {
   /**
    * Get all annotations for a book, optionally filtered by device
-   * @param includeDeleted - If true, includes soft-deleted annotations
    */
-  static async getByBookMd5(md5: string, deviceId?: string, includeDeleted = false): Promise<Annotation[]> {
-    let query = db<Annotation>('annotation')
-      .where({ book_md5: md5 })
-      .orderBy('datetime', 'desc');
+  static async getByBookMd5(md5: string, deviceId?: string): Promise<Annotation[]> {
+    let query = db<Annotation>('annotation').where({ book_md5: md5 }).orderBy('datetime', 'desc');
 
     if (deviceId) {
       query = query.where({ device_id: deviceId });
     }
 
-    // Filter out soft-deleted annotations by default
-    if (!includeDeleted) {
-      query = query.whereNull('deleted_at');
-    }
-
     const annotations = await query;
+    console.log({ query, annotations });
 
     // Parse JSON position data and expose a simple `deleted` flag for clients
     return annotations.map((a) => ({
@@ -98,7 +91,9 @@ export class AnnotationsRepository {
   /**
    * Insert a single annotation
    */
-  static async insert(annotation: Omit<Annotation, 'id' | 'created_at' | 'updated_at'>): Promise<Annotation> {
+  static async insert(
+    annotation: Omit<Annotation, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<Annotation> {
     // Stringify position data if it's an object
     const annotationToInsert = {
       ...annotation,
@@ -106,9 +101,7 @@ export class AnnotationsRepository {
       pos1: typeof annotation.pos1 === 'object' ? JSON.stringify(annotation.pos1) : annotation.pos1,
     };
 
-    const [inserted] = await db<Annotation>('annotation')
-      .insert(annotationToInsert)
-      .returning('*');
+    const [inserted] = await db<Annotation>('annotation').insert(annotationToInsert).returning('*');
 
     return {
       ...inserted,
@@ -122,17 +115,21 @@ export class AnnotationsRepository {
    */
   static async update(
     id: number,
-    updates: Partial<Omit<Annotation, 'id' | 'book_md5' | 'device_id' | 'created_at' | 'updated_at'>>
+    updates: Partial<
+      Omit<Annotation, 'id' | 'book_md5' | 'device_id' | 'created_at' | 'updated_at'>
+    >
   ): Promise<number> {
     // Stringify position data if it's an object
     const updatesToApply = {
       ...updates,
-      pos0: updates.pos0 && typeof updates.pos0 === 'object' 
-        ? JSON.stringify(updates.pos0) 
-        : updates.pos0,
-      pos1: updates.pos1 && typeof updates.pos1 === 'object' 
-        ? JSON.stringify(updates.pos1) 
-        : updates.pos1,
+      pos0:
+        updates.pos0 && typeof updates.pos0 === 'object'
+          ? JSON.stringify(updates.pos0)
+          : updates.pos0,
+      pos1:
+        updates.pos1 && typeof updates.pos1 === 'object'
+          ? JSON.stringify(updates.pos1)
+          : updates.pos1,
     };
 
     return db('annotation').where({ id }).update(updatesToApply);
@@ -231,15 +228,13 @@ export class AnnotationsRepository {
    * Sets deleted_at to current timestamp instead of removing the record
    */
   static async markAsDeleted(id: number): Promise<number> {
-    return db('annotation')
-      .where({ id })
-      .update({ deleted_at: db.fn.now() });
+    return db('annotation').where({ id }).update({ deleted_at: db.fn.now() });
   }
 
   /**
    * Soft-delete multiple annotations by their identifiers
    * Used during sync to mark annotations that were deleted in KoReader
-   * 
+   *
    * @param bookMd5 - The book's MD5 hash
    * @param deviceId - The device ID
    * @param identifiers - Array of unique identifiers (page_ref + datetime)
@@ -256,7 +251,7 @@ export class AnnotationsRepository {
     }
 
     const executor = trx || db;
-    
+
     // Build conditions for each identifier
     const query = executor('annotation')
       .where({ book_md5: bookMd5, device_id: deviceId })
@@ -276,8 +271,6 @@ export class AnnotationsRepository {
    * Sets deleted_at back to NULL
    */
   static async restore(id: number): Promise<number> {
-    return db('annotation')
-      .where({ id })
-      .update({ deleted_at: null });
+    return db('annotation').where({ id }).update({ deleted_at: null });
   }
 }

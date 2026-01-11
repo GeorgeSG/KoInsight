@@ -2,10 +2,7 @@ import { Annotation, BookWithData } from '@koinsight/common/types';
 import { Accordion, Box, Divider, Stack, Text, Title } from '@mantine/core';
 import { useMemo, useState } from 'react';
 import { AnnotationCard } from './annotation-card';
-import {
-  AnnotationFilters,
-  AnnotationFiltersComponent,
-} from './annotation-filters';
+import { AnnotationFilters, AnnotationFiltersComponent } from './annotation-filters';
 
 type BookPageAnnotationsProps = {
   book: BookWithData;
@@ -21,6 +18,7 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
   });
 
   const filteredAndSortedAnnotations = useMemo(() => {
+    console.log({ annotations: book.annotations });
     let filtered = book.annotations;
 
     // Filter by type
@@ -89,10 +87,7 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
   const renderAnnotationsList = (annotations: Annotation[]) => (
     <Stack gap="md">
       {annotations.map((annotation) => (
-        <AnnotationCard 
-          key={annotation.id} 
-          annotation={annotation}
-        />
+        <AnnotationCard key={annotation.id} annotation={annotation} />
       ))}
     </Stack>
   );
@@ -104,8 +99,8 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
           Annotations ({filteredAndSortedAnnotations.length} of {book.annotations.length})
         </Title>
         <Text size="sm" c="dimmed">
-          {book.highlights_count} highlights · {book.notes_count} notes ·{' '}
-          {book.bookmarks_count} bookmarks
+          {book.highlights_count} highlights · {book.notes_count} notes · {book.bookmarks_count}{' '}
+          bookmarks
           {book.deleted_count > 0 && ` · ${book.deleted_count} deleted`}
         </Text>
       </Box>

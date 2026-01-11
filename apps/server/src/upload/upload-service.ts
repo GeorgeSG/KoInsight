@@ -123,10 +123,16 @@ export class UploadService {
           )
         );
 
-        // Detect and mark deleted annotations
+        const bookMd5s = newBooks.map((b) => b.md5).filter((md5): md5 is string => !!md5);
+
         await Promise.all(
-          Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
-            this.detectAndMarkDeletedAnnotations(bookMd5, deviceId, annotations, trx)
+          bookMd5s.map((bookMd5) =>
+            this.detectAndMarkDeletedAnnotations(
+              bookMd5,
+              deviceId,
+              annotationsByBook[bookMd5] || [],
+              trx
+            )
           )
         );
       }
@@ -166,9 +172,9 @@ export class UploadService {
     );
 
     if (deletedAnnotations.length > 0) {
-      console.log(`Marked ${deletedAnnotations.length} annotations as deleted for book ${bookMd5}`);
-
       await AnnotationsRepository.markManyAsDeleted(bookMd5, deviceId, deletedAnnotations, trx);
+
+      console.log(`Marked ${deletedAnnotations.length} annotations as deleted for book ${bookMd5}`);
     }
   }
 }
