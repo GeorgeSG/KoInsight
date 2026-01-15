@@ -58,5 +58,6 @@ export async function seed(knex: Knex): Promise<void> {
     }
   });
 
-  await Promise.all(promises);
+  const pageStats = await Promise.all(promises);
+  console.log(`✓ Seeded ${pageStats.length} page statistics`);
 }
