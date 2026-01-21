@@ -138,7 +138,7 @@ router.get('/syncs/progress/:document', authenticate, async (req: Request, res: 
     return;
   }
 
-  const progress = await KosyncRepository.getByUserIdAndDocument(user.id, document);
+  const progress = await KosyncRepository.getByUserIdAndDocument(user.id, String(document));
   if (!progress) {
     res.status(404).json({ error: 'Progress not found' });
     return;
