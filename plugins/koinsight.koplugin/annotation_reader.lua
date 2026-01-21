@@ -3,10 +3,34 @@ local logger = require("logger")
 
 local KoInsightAnnotationReader = {}
 
+-- NOTE:
+-- This module is used both inside the reader (normal annotation sync)
+-- and outside (bulk sync).
+-- There is a chance that after rebooting KoReader, the ReaderUI is not
+-- yet available, so requiring it can blow up.
+-- Therefore we lazy-load ReaderUI behind pcall() the first time we actually need it.
+-- This keeps the module safe to require in any context while still allowing us to
+-- use the live reader UI when it exists.
+local ReaderUI_ok, ReaderUI = nil, nil
+local function get_live_ui()
+  if ReaderUI_ok == nil then
+    ReaderUI_ok, ReaderUI = pcall(require, "apps/reader/readerui")
+  end
+  return (ReaderUI_ok and ReaderUI and ReaderUI.instance) or nil
+end
+
+-- KoReader has this API, ideal for bulk operations
+local function open_sidecar_readonly(doc_path)
+  local sidecar = DocSettings:findSidecarFile(doc_path)
+  if not sidecar then
+    return nil
+  end
+  return DocSettings.openSettingsFile(sidecar)
+end
+
 -- Get the currently opened document
 function KoInsightAnnotationReader.getCurrentDocument()
-  local ReaderUI = require("apps/reader/readerui")
-  local ui = ReaderUI.instance
+  local ui = get_live_ui()
 
   if ui and ui.document and ui.document.file then
     return ui.document.file
@@ -17,21 +41,21 @@ end
 
 -- Get the MD5 hash for the currently open document
 function KoInsightAnnotationReader.getCurrentBookMd5()
+  -- when inside reader
+  local ui = get_live_ui()
+  if ui and ui.doc_settings then
+    return ui.doc_settings:readSetting("partial_md5_checksum")
+  end
+
+  -- fallback (if called outside reader, e.g. in bulk operation)
   local current_doc = KoInsightAnnotationReader.getCurrentDocument()
-  if not current_doc then
-    return nil
-  end
-
-  local doc_settings = DocSettings:open(current_doc)
-  if not doc_settings then
-    return nil
-  end
-
-  return doc_settings:readSetting("partial_md5_checksum")
+  local ds = current_doc and open_sidecar_readonly(current_doc)
+  return ds and ds:readSetting("partial_md5_checksum") or nil
 end
 
 -- Get annotations for the currently opened book
 function KoInsightAnnotationReader.getCurrentBookAnnotations()
+  local ui = get_live_ui()
   local current_doc = KoInsightAnnotationReader.getCurrentDocument()
 
   if not current_doc then
@@ -43,14 +67,18 @@ function KoInsightAnnotationReader.getCurrentBookAnnotations()
 
   -- Force flush any in-memory changes to disk before reading
   -- Otherwise changes are not reflected
-  local ReaderUI = require("apps/reader/readerui")
-  local ui = ReaderUI.instance
+  --
+  -- IMPORTANT:
+  -- If we are inside the reader, ui.doc_settings is the freshest source (in-memory).
+  -- We flush to ensure sidecar on disk is up-to-date for other codepaths.
   if ui and ui.doc_settings then
     logger.dbg("[KoInsight] Flushing doc settings to disk")
     ui.doc_settings:flush()
   end
 
-  local doc_settings = DocSettings:open(current_doc)
+  -- Prefer live doc_settings when inside reader (fresh, no extra sidecar open)
+  -- Fall back to read-only sidecar open (outside reader withouth live settings)
+  local doc_settings = (ui and ui.doc_settings) or open_sidecar_readonly(current_doc)
   if not doc_settings then
     logger.dbg("[KoInsight] No doc settings found for:", current_doc)
     return nil
@@ -71,6 +99,9 @@ function KoInsightAnnotationReader.getCurrentBookAnnotations()
   if ui and ui.document then
     total_pages = ui.document:getPageCount()
     logger.dbg("[KoInsight] Document has", total_pages, "total pages")
+  else
+    -- Fallback for outside of reader, where we have no live ui.document
+    total_pages = doc_settings:readSetting("doc_pages")
   end
 
   logger.info("[KoInsight] Found", #annotations, "annotations for current book")
@@ -81,8 +112,8 @@ end
 function KoInsightAnnotationReader.getAnnotationsByBook()
   local annotations_by_book = {}
 
-  -- For now, only get annotations from currently opened book
-  -- TODO: check bulk-syncing possibilities
+  -- Get annotations from currently opened book
+  -- Bulk syncing is another code path since we need to open sidecar files for bulk syncing
   local current_annotations, total_pages = KoInsightAnnotationReader.getCurrentBookAnnotations()
 
   if not current_annotations or #current_annotations == 0 then
@@ -148,7 +179,8 @@ function KoInsightAnnotationReader.getBookDataFromSidecar(file_path)
     return nil
   end
 
-  local doc_settings = DocSettings:open(file_path)
+  -- Read-only sidecar open: ideal for bulk operations
+  local doc_settings = open_sidecar_readonly(file_path)
   if not doc_settings then
     return nil
   end
@@ -206,7 +238,8 @@ function KoInsightAnnotationReader.getAnnotationsForBook(file_path)
 
   logger.dbg("[KoInsight] Reading annotations for:", file_path)
 
-  local doc_settings = DocSettings:open(file_path)
+  -- Read-only sidecar open: avoids unintended writes during bulk reads
+  local doc_settings = open_sidecar_readonly(file_path)
   if not doc_settings then
     logger.dbg("[KoInsight] No doc settings found for:", file_path)
     return nil, nil
@@ -231,7 +264,8 @@ function KoInsightAnnotationReader.getMd5ForPath(file_path)
     return nil
   end
 
-  local doc_settings = DocSettings:open(file_path)
+  -- Read-only sidecar open: avoids unintended writes during bulk reads
+  local doc_settings = open_sidecar_readonly(file_path)
   if not doc_settings then
     return nil
   end
@@ -257,8 +291,7 @@ function KoInsightAnnotationReader.getAllBooksWithAnnotations()
   -- Force flush currently open book settings to disk first
   -- Only needed if the user is currently in a book, other books should already
   -- have been flushed settings
-  local ReaderUI = require("apps/reader/readerui")
-  local ui = ReaderUI.instance
+  local ui = get_live_ui()
   if ui and ui.doc_settings then
     logger.dbg("[KoInsight] Flushing currently open book's doc settings to disk")
     ui.doc_settings:flush()
