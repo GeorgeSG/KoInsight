@@ -32,6 +32,7 @@ function koinsight:addToMainMenu(menu_items)
         callback = function()
           self:performFullSync()
         end,
+        separator = true, -- separator line
       },
 
       -- 2) Sync on suspend
