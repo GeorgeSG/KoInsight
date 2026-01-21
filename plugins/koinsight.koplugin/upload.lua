@@ -226,8 +226,8 @@ function bulk_sync_all_books(server_url, progress_callback)
   end
 end
 
--- Main sync function (current book + stats)
-function KoInsightUpload.sync(server_url, silent)
+-- Sync current book only (stats + current book annotations)
+function KoInsightUpload.syncCurrentBook(server_url, silent)
   if silent == nil then
     silent = false
   end
@@ -242,8 +242,8 @@ function KoInsightUpload.sync(server_url, silent)
   send_statistics_data(server_url, silent)
 end
 
--- Bulk sync function (all books with annotations)
-function KoInsightUpload.bulkSync(server_url, progress_callback)
+-- Sync all books (stats + all book annotations)
+function KoInsightUpload.syncAllBooks(server_url, progress_callback)
   if server_url == nil or server_url == "" then
     UIManager:show(InfoMessage:new({
       text = _("Please configure the server URL first."),
@@ -252,6 +252,12 @@ function KoInsightUpload.bulkSync(server_url, progress_callback)
   end
 
   send_device_data(server_url, true) -- silent
+
+  -- First, sync all statistics data from the database
+  -- This includes all reading progress (page_stat_data) and book metadata
+  send_statistics_data(server_url, true) -- silent
+
+  -- Then, sync all annotations for all books
   bulk_sync_all_books(server_url, progress_callback)
 end
 
