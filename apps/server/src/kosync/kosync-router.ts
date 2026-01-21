@@ -124,28 +124,32 @@ router.put('/syncs/progress', authenticate, async (req: Request, res: Response) 
  * ],
  * "expected_status" : [200, 401]
  */
-router.get('/syncs/progress/:document', authenticate, async (req: Request, res: Response) => {
-  const { document } = req.params;
-  const user = req.user;
+router.get(
+  '/syncs/progress/:document',
+  authenticate,
+  async (req: Request<{ document: string }>, res: Response) => {
+    const document = req.params.document;
+    const user = req.user;
 
-  if (!user) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
+    if (!user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!document) {
+      res.status(400).json({ error: 'Document is required' });
+      return;
+    }
+
+    const progress = await KosyncRepository.getByUserIdAndDocument(user.id, document);
+    if (!progress) {
+      res.status(404).json({ error: 'Progress not found' });
+      return;
+    }
+
+    res.status(200).json(progress);
   }
-
-  if (!document) {
-    res.status(400).json({ error: 'Document is required' });
-    return;
-  }
-
-  const progress = await KosyncRepository.getByUserIdAndDocument(user.id, String(document));
-  if (!progress) {
-    res.status(404).json({ error: 'Progress not found' });
-    return;
-  }
-
-  res.status(200).json(progress);
-});
+);
 
 router.get('/syncs/progress', async (req: Request, res: Response) => {
   const progresses = await KosyncRepository.getAll();

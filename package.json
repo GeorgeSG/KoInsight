@@ -1,7 +1,7 @@
 {
   "name": "koinsight",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.2",
   "packageManager": "npm@10.2.4",
   "license": "MIT",
   "engines": {
@@ -13,7 +13,9 @@
   ],
   "scripts": {
     "build": "turbo run build",
-    "test:coverage": "turbo run test:coverage"
+    "test:coverage": "turbo run test:coverage",
+    "dev": "turbo run dev --parallel",
+    "seed": "npm --workspace=server run seed"
   },
   "devDependencies": {
     "prettier": "3.6.2",

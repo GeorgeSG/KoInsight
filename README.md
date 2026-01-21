@@ -23,6 +23,7 @@
 # Features
 
 - 📈 Interactive dashboard with charts and insights
+- ✏️ Highlights sync
 - 🔄 KOReader plugin for syncing reading stats
 - 📱 Multi-device support
 - 📤 Manual .sqlite upload supported
@@ -141,6 +142,9 @@ You can use your KoInsight instance as a KOReader sync server. This allows you t
 1. Sync your progress.
 
 The progress sync data should appear in the **"Progress syncs"** page in KoInsight.
+
+# Development
+See [DEVELOPMENT.md](DEVELOPMENT.md) for development setup and instructions.
 
 # Roadmap
 (a.k.a things I want to do)

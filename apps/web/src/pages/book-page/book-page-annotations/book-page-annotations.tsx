@@ -1,36 +1,31 @@
 import { Annotation, BookWithData } from '@koinsight/common/types';
 import { Accordion, Box, Divider, Stack, Text, Title } from '@mantine/core';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { AnnotationCard } from './annotation-card';
-import { AnnotationFilters, AnnotationFiltersComponent } from './annotation-filters';
+import { AnnotationFiltersComponent } from './annotation-filters';
+import { useAnnotationFilters } from './use-annotation-filters';
 
 type BookPageAnnotationsProps = {
   book: BookWithData;
 };
 
 export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
-  const [filters, setFilters] = useState<AnnotationFilters>({
-    search: '',
-    types: ['highlight', 'note', 'bookmark'],
-    showDeleted: false,
-    sortBy: 'newest',
-    groupBy: 'none',
-  });
+  const { searchTerm, types, showDeleted, sortBy, groupBy } = useAnnotationFilters();
 
   const filteredAndSortedAnnotations = useMemo(() => {
     let filtered = book.annotations;
 
     // Filter by type
-    filtered = filtered.filter((a) => filters.types.includes(a.annotation_type));
+    filtered = filtered.filter((a) => types.includes(a.annotation_type));
 
     // Filter by deleted status
-    if (!filters.showDeleted) {
+    if (!showDeleted) {
       filtered = filtered.filter((a) => !a.deleted_at && !a.deleted);
     }
 
     // Filter by search text
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (a) =>
           a.text?.toLowerCase().includes(searchLower) ||
@@ -41,7 +36,7 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
 
     // Sort
     const sorted = [...filtered].sort((a, b) => {
-      switch (filters.sortBy) {
+      switch (sortBy) {
         case 'newest':
           return new Date(b.datetime).getTime() - new Date(a.datetime).getTime();
         case 'oldest':
@@ -56,10 +51,10 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
     });
 
     return sorted;
-  }, [book.annotations, filters]);
+  }, [book.annotations, types, sortBy, searchTerm, showDeleted, groupBy]);
 
   const groupedAnnotations = useMemo(() => {
-    if (filters.groupBy === 'none') {
+    if (groupBy === 'none') {
       return { '': filteredAndSortedAnnotations };
     }
 
@@ -68,9 +63,9 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
     filteredAndSortedAnnotations.forEach((annotation) => {
       let key = '';
 
-      if (filters.groupBy === 'type') {
+      if (groupBy === 'type') {
         key = annotation.annotation_type;
-      } else if (filters.groupBy === 'chapter') {
+      } else if (groupBy === 'chapter') {
         key = annotation.chapter || 'Unknown chapter';
       }
 
@@ -81,15 +76,7 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
     });
 
     return groups;
-  }, [filteredAndSortedAnnotations, filters.groupBy]);
-
-  const renderAnnotationsList = (annotations: Annotation[]) => (
-    <Stack gap="md">
-      {annotations.map((annotation) => (
-        <AnnotationCard key={annotation.id} annotation={annotation} />
-      ))}
-    </Stack>
-  );
+  }, [filteredAndSortedAnnotations, groupBy]);
 
   return (
     <Stack gap="lg">
@@ -104,7 +91,7 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
         </Text>
       </Box>
 
-      <AnnotationFiltersComponent filters={filters} onFiltersChange={setFilters} />
+      <AnnotationFiltersComponent />
 
       <Divider />
 
@@ -112,8 +99,8 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
         <Text c="dimmed" ta="center" py="xl">
           No annotations found with the current filters.
         </Text>
-      ) : filters.groupBy === 'none' ? (
-        renderAnnotationsList(filteredAndSortedAnnotations)
+      ) : groupBy === 'none' ? (
+        <AnnotationsList annotations={filteredAndSortedAnnotations} />
       ) : (
         <Accordion variant="separated">
           {Object.entries(groupedAnnotations).map(([groupName, annotations]) => (
@@ -123,11 +110,24 @@ export function BookPageAnnotations({ book }: BookPageAnnotationsProps) {
                   {groupName} ({annotations.length})
                 </Text>
               </Accordion.Control>
-              <Accordion.Panel>{renderAnnotationsList(annotations)}</Accordion.Panel>
+              <Accordion.Panel>
+                <AnnotationsList annotations={annotations} />
+              </Accordion.Panel>
             </Accordion.Item>
           ))}
         </Accordion>
       )}
+    </Stack>
+  );
+}
+
+function AnnotationsList({ annotations }: { annotations: Annotation[] }) {
+  console.log({ annotations });
+  return (
+    <Stack gap="md">
+      {annotations.map((annotation) => (
+        <AnnotationCard key={annotation.id} annotation={annotation} />
+      ))}
     </Stack>
   );
 }

@@ -131,16 +131,10 @@ export class UploadService {
           )
         );
 
-        const bookMd5s = newBooks.map((b) => b.md5).filter((md5): md5 is string => !!md5);
-
+        // FIXME: with this, if there is only 1 annotation and it gets removed, it won't get marked as deleted, because `annotationsByBook` will be empty. It will only get marked as deleted if the user adds another annotation to trigger an update on the book.
         await Promise.all(
-          bookMd5s.map((bookMd5) =>
-            this.detectAndMarkDeletedAnnotations(
-              bookMd5,
-              deviceId,
-              annotationsByBook[bookMd5] || [],
-              trx
-            )
+          Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
+            this.detectAndMarkDeletedAnnotations(bookMd5, deviceId, annotations, trx)
           )
         );
       }
