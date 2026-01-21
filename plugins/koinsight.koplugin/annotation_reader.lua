@@ -217,14 +217,7 @@ function KoInsightAnnotationReader.getBookDataFromSidecar(file_path)
     highlights = (stats and stats.highlights) or 0,
     notes = (stats and stats.notes) or 0,
     last_open = (summary and summary.modified) or os.time(),
-    total_read_time = 0,
-    total_read_pages = 0,
   }
-
-  -- Calculate read pages from percent_finished
-  if percent_finished and total_pages then
-    book_metadata.total_read_pages = math.floor(total_pages * percent_finished)
-  end
 
   return md5, annotations, total_pages, book_metadata
 end

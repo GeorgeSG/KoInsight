@@ -82,24 +82,32 @@ export class UploadService {
         pages: book.pages,
         notes: book.notes,
         highlights: book.highlights,
-        total_read_pages: book.total_read_pages,
-        total_read_time: book.total_read_time,
+        total_read_pages: book.total_read_pages ?? 0,
+        total_read_time: book.total_read_time ?? 0,
       }));
 
       await Promise.all(
-        newBookDevices.map((bookDevice) =>
-          trx<BookDevice>('book_device')
+        newBookDevices.map((bookDevice) => {
+          const { book_md5, device_id, total_read_time, total_read_pages, ...otherFields } =
+            bookDevice;
+
+          // Always merge these fields
+          const fieldsToMerge: (keyof BookDevice)[] = ['last_open', 'pages', 'notes', 'highlights'];
+
+          // Only merge statistics fields if they have actual values (if on statistics.db sync path)
+          // This prevents annotation-only syncs from overwriting with zeros
+          if (total_read_time !== undefined && total_read_time > 0) {
+            fieldsToMerge.push('total_read_time');
+          }
+          if (total_read_pages !== undefined && total_read_pages > 0) {
+            fieldsToMerge.push('total_read_pages');
+          }
+
+          return trx<BookDevice>('book_device')
             .insert(bookDevice)
             .onConflict(['book_md5', 'device_id'])
-            .merge([
-              'last_open',
-              'pages',
-              'notes',
-              'highlights',
-              'total_read_time',
-              'total_read_pages',
-            ])
-        )
+            .merge(fieldsToMerge);
+        })
       );
 
       // Insert page stats
