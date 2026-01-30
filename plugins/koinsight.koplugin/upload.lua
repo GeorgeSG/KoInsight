@@ -108,13 +108,23 @@ function send_book_annotations(server_url, book_md5, annotations, total_pages, b
     end
   end
 
+  -- WARN: We MUST have book metadata to send annotations
+  -- The server has a foreign key constraint: annotations.book_md5 -> book.md5
+  -- If we don't send book data, annotation insert will fail
+  if not book_to_send then
+    logger.err(
+      "[KoInsight] Cannot sync annotations for book " .. book_md5 .. ": no book metadata available"
+    )
+    return false, { error = "No book metadata available" }
+  end
+
   -- Create minimal payload
   local annotations_by_book = {}
   annotations_by_book[book_md5] = cleaned_annotations
 
   local body = {
     stats = {}, -- empty stats on annotations sync path, handled server side
-    books = book_to_send and { book_to_send } or {},
+    books = { book_to_send }, -- Always send book metadata for FK constraint
     annotations = annotations_by_book,
     device_id = device_id,
     version = const.VERSION,
