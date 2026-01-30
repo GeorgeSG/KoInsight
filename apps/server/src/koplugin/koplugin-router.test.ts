@@ -10,7 +10,7 @@ describe('koplugin-router', () => {
   app.use(express.json());
   app.use('/koplugin', kopluginRouter);
 
-  const PLUGIN_VERSION = '0.2.0';
+  const PLUGIN_VERSION = '0.3.0';
 
   describe('POST /koplugin/device', () => {
     it('registers a device', async () => {
