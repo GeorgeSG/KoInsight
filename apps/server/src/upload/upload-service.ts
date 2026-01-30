@@ -41,7 +41,8 @@ export class UploadService {
   static uploadStatisticData(
     booksToImport: KoReaderBook[],
     newPageStats: PageStat[],
-    annotationsByBook?: Record<string, KoReaderAnnotation[]>
+    annotationsByBook?: Record<string, KoReaderAnnotation[]>,
+    deviceIdOverride?: string // For annotation sync path without stats
   ) {
     return db.transaction(async (trx) => {
       // Insert books
@@ -58,8 +59,13 @@ export class UploadService {
         newBooks.map(({ id, ...book }) => trx<Book>('book').insert(book).onConflict('md5').ignore())
       );
 
-      const hasUnknownDevices =
-        newPageStats.length > 0 && newPageStats[0].device_id === this.UNKNOWN_DEVICE_ID;
+      // Determine device ID: from stats, override, or fall back to unknown device
+      const deviceId =
+        newPageStats.length > 0
+          ? newPageStats[0].device_id
+          : deviceIdOverride || this.UNKNOWN_DEVICE_ID;
+
+      const hasUnknownDevices = deviceId === this.UNKNOWN_DEVICE_ID;
 
       if (hasUnknownDevices) {
         let unknownDevice = await trx<Device>('device')
@@ -76,7 +82,7 @@ export class UploadService {
       }
 
       const newBookDevices: Omit<BookDevice, 'id'>[] = booksToImport.map((book) => ({
-        device_id: newPageStats[0].device_id,
+        device_id: deviceId,
         book_md5: book.md5,
         last_open: book.last_open,
         pages: book.pages,
@@ -110,31 +116,36 @@ export class UploadService {
         })
       );
 
-      // Insert page stats
-      await Promise.all(
-        newPageStats.map((pageStat) =>
-          trx<PageStat>('page_stat')
-            .insert(pageStat)
-            .onConflict(['device_id', 'book_md5', 'page', 'start_time'])
-            .merge(['duration', 'total_pages'])
-        )
-      );
+      // Insert page stats (only on stats sync path! there are non for annotation sync path)
+      if (newPageStats.length > 0) {
+        await Promise.all(
+          newPageStats.map((pageStat) =>
+            trx<PageStat>('page_stat')
+              .insert(pageStat)
+              .onConflict(['device_id', 'book_md5', 'page', 'start_time'])
+              .merge(['duration', 'total_pages'])
+          )
+        );
+      }
 
       // Insert annotations if provided
       if (annotationsByBook) {
-        const deviceId =
-          newPageStats.length > 0 ? newPageStats[0].device_id : this.UNKNOWN_DEVICE_ID;
+        // Use same deviceId logic as above
+        const annotationDeviceId =
+          newPageStats.length > 0
+            ? newPageStats[0].device_id
+            : deviceIdOverride || this.UNKNOWN_DEVICE_ID;
 
         await Promise.all(
           Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
-            AnnotationsRepository.bulkInsert(bookMd5, deviceId, annotations, trx)
+            AnnotationsRepository.bulkInsert(bookMd5, annotationDeviceId, annotations, trx)
           )
         );
 
         // FIXME: with this, if there is only 1 annotation and it gets removed, it won't get marked as deleted, because `annotationsByBook` will be empty. It will only get marked as deleted if the user adds another annotation to trigger an update on the book.
         await Promise.all(
           Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
-            this.detectAndMarkDeletedAnnotations(bookMd5, deviceId, annotations, trx)
+            this.detectAndMarkDeletedAnnotations(bookMd5, annotationDeviceId, annotations, trx)
           )
         );
       }

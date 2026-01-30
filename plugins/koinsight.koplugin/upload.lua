@@ -113,18 +113,10 @@ function send_book_annotations(server_url, book_md5, annotations, total_pages, b
   annotations_by_book[book_md5] = cleaned_annotations
 
   local body = {
-    stats = {
-      {
-        page = 1,
-        start_time = os.time(),
-        duration = 0,
-        total_pages = total_pages or 1,
-        book_md5 = book_md5,
-        device_id = device_id,
-      },
-    },
+    stats = {}, -- empty stats on annotations sync path, handled server side
     books = book_to_send and { book_to_send } or {},
     annotations = annotations_by_book,
+    device_id = device_id,
     version = const.VERSION,
   }
 
