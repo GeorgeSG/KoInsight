@@ -11,7 +11,7 @@ import { UploadService } from '../upload/upload-service';
 // Router for KoInsight koreader plugin
 const router = Router();
 
-const REQUIRED_PLUGIN_VERSION = '0.3.0';
+export const REQUIRED_PLUGIN_VERSION = '0.3.0';
 
 const rejectOldPluginVersion = (req: Request, res: Response, next: NextFunction) => {
   const { version } = req.body;
