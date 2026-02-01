@@ -11,7 +11,7 @@ import { UploadService } from '../upload/upload-service';
 // Router for KoInsight koreader plugin
 const router = Router();
 
-const REQUIRED_PLUGIN_VERSION = '0.2.0';
+export const REQUIRED_PLUGIN_VERSION = '0.3.0';
 
 const rejectOldPluginVersion = (req: Request, res: Response, next: NextFunction) => {
   const { version } = req.body;
@@ -53,6 +53,7 @@ router.post('/import', rejectOldPluginVersion, async (req, res) => {
   const koreaderBooks: KoReaderBook[] = req.body.books;
   const newPageStats: PageStat[] = req.body.stats;
   const annotations: Record<string, KoReaderAnnotation[]> = req.body.annotations || {};
+  const deviceId: string | undefined = req.body.device_id; // For annotation sync path
 
   try {
     console.debug('Importing books:', koreaderBooks);
@@ -63,7 +64,7 @@ router.post('/import', rejectOldPluginVersion, async (req, res) => {
       'books with annotations'
     );
 
-    await UploadService.uploadStatisticData(koreaderBooks, newPageStats, annotations);
+    await UploadService.uploadStatisticData(koreaderBooks, newPageStats, annotations, deviceId);
     res.status(200).json({ message: 'Upload successful' });
   } catch (err) {
     console.error(err);

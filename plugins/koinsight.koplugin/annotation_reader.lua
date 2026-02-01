@@ -3,10 +3,34 @@ local logger = require("logger")
 
 local KoInsightAnnotationReader = {}
 
+-- NOTE:
+-- This module is used both inside the reader (normal annotation sync)
+-- and outside (bulk sync).
+-- There is a chance that after rebooting KoReader, the ReaderUI is not
+-- yet available, so requiring it can blow up.
+-- Therefore we lazy-load ReaderUI behind pcall() the first time we actually need it.
+-- This keeps the module safe to require in any context while still allowing us to
+-- use the live reader UI when it exists.
+local ReaderUI_ok, ReaderUI = nil, nil
+local function get_live_ui()
+  if ReaderUI_ok == nil then
+    ReaderUI_ok, ReaderUI = pcall(require, "apps/reader/readerui")
+  end
+  return (ReaderUI_ok and ReaderUI and ReaderUI.instance) or nil
+end
+
+-- KoReader has this API, ideal for bulk operations
+local function open_sidecar_readonly(doc_path)
+  local sidecar = DocSettings:findSidecarFile(doc_path)
+  if not sidecar then
+    return nil
+  end
+  return DocSettings.openSettingsFile(sidecar)
+end
+
 -- Get the currently opened document
 function KoInsightAnnotationReader.getCurrentDocument()
-  local ReaderUI = require("apps/reader/readerui")
-  local ui = ReaderUI.instance
+  local ui = get_live_ui()
 
   if ui and ui.document and ui.document.file then
     return ui.document.file
@@ -17,49 +41,21 @@ end
 
 -- Get the MD5 hash for the currently open document
 function KoInsightAnnotationReader.getCurrentBookMd5()
+  -- when inside reader
+  local ui = get_live_ui()
+  if ui and ui.doc_settings then
+    return ui.doc_settings:readSetting("partial_md5_checksum")
+  end
+
+  -- fallback (if called outside reader, e.g. in bulk operation)
   local current_doc = KoInsightAnnotationReader.getCurrentDocument()
-  if not current_doc then
-    return nil
-  end
-
-  -- Get document info from ReaderUI
-  local ReaderUI = require("apps/reader/readerui")
-  local ui = ReaderUI.instance
-
-  if ui and ui.document and ui.document.info then
-    local doc_props = ui.document:getProps()
-    if doc_props and doc_props.title then
-      -- Try to find book by title in statistics database
-      local SQ3 = require("lua-ljsqlite3/init")
-      local DataStorage = require("datastorage")
-      local db_location = DataStorage:getSettingsDir() .. "/statistics.sqlite3"
-
-      local conn = SQ3.open(db_location)
-
-      -- Escape single quotes in title for SQL
-      local safe_title = doc_props.title:gsub("'", "''")
-      local query = string.format("SELECT md5 FROM book WHERE title = '%s'", safe_title)
-
-      logger.dbg("[KoInsight] Looking for book with title:", doc_props.title)
-
-      local result, rows = conn:exec(query)
-      conn:close()
-
-      if rows > 0 and result[1] and result[1][1] then
-        local md5 = result[1][1]
-        logger.info("[KoInsight] Found MD5 for current book:", md5)
-        return md5
-      else
-        logger.warn("[KoInsight] Book not found in statistics database:", doc_props.title)
-      end
-    end
-  end
-
-  return nil
+  local ds = current_doc and open_sidecar_readonly(current_doc)
+  return ds and ds:readSetting("partial_md5_checksum") or nil
 end
 
 -- Get annotations for the currently opened book
 function KoInsightAnnotationReader.getCurrentBookAnnotations()
+  local ui = get_live_ui()
   local current_doc = KoInsightAnnotationReader.getCurrentDocument()
 
   if not current_doc then
@@ -71,14 +67,18 @@ function KoInsightAnnotationReader.getCurrentBookAnnotations()
 
   -- Force flush any in-memory changes to disk before reading
   -- Otherwise changes are not reflected
-  local ReaderUI = require("apps/reader/readerui")
-  local ui = ReaderUI.instance
+  --
+  -- IMPORTANT:
+  -- If we are inside the reader, ui.doc_settings is the freshest source (in-memory).
+  -- We flush to ensure sidecar on disk is up-to-date for other codepaths.
   if ui and ui.doc_settings then
     logger.dbg("[KoInsight] Flushing doc settings to disk")
     ui.doc_settings:flush()
   end
 
-  local doc_settings = DocSettings:open(current_doc)
+  -- Prefer live doc_settings when inside reader (fresh, no extra sidecar open)
+  -- Fall back to read-only sidecar open (outside reader withouth live settings)
+  local doc_settings = (ui and ui.doc_settings) or open_sidecar_readonly(current_doc)
   if not doc_settings then
     logger.dbg("[KoInsight] No doc settings found for:", current_doc)
     return nil
@@ -99,6 +99,9 @@ function KoInsightAnnotationReader.getCurrentBookAnnotations()
   if ui and ui.document then
     total_pages = ui.document:getPageCount()
     logger.dbg("[KoInsight] Document has", total_pages, "total pages")
+  else
+    -- Fallback for outside of reader, where we have no live ui.document
+    total_pages = doc_settings:readSetting("doc_pages")
   end
 
   logger.info("[KoInsight] Found", #annotations, "annotations for current book")
@@ -109,8 +112,8 @@ end
 function KoInsightAnnotationReader.getAnnotationsByBook()
   local annotations_by_book = {}
 
-  -- For now, only get annotations from currently opened book
-  -- TODO: check bulk-syncing possibilities
+  -- Get annotations from currently opened book
+  -- Bulk syncing is another code path since we need to open sidecar files for bulk syncing
   local current_annotations, total_pages = KoInsightAnnotationReader.getCurrentBookAnnotations()
 
   if not current_annotations or #current_annotations == 0 then
@@ -127,10 +130,21 @@ function KoInsightAnnotationReader.getAnnotationsByBook()
   end
 
   -- Clean up annotations for JSON serialization
-  local cleaned_annotations = {}
-  for _, annotation in ipairs(current_annotations) do
-    -- Only include fields that are needed
-    local cleaned = {
+  local cleaned_annotations =
+    KoInsightAnnotationReader.cleanAnnotations(current_annotations, total_pages)
+
+  annotations_by_book[book_md5] = cleaned_annotations
+  logger.info("[KoInsight] Prepared", #cleaned_annotations, "annotations for book", book_md5)
+
+  return annotations_by_book
+end
+
+-- Clean annotations for JSON serialization
+-- Removes unnecessary fields and formats data for server
+function KoInsightAnnotationReader.cleanAnnotations(annotations, total_pages)
+  local cleaned = {}
+  for _, annotation in ipairs(annotations) do
+    local cleaned_annotation = {
       datetime = annotation.datetime,
       drawer = annotation.drawer,
       color = annotation.color,
@@ -139,29 +153,206 @@ function KoInsightAnnotationReader.getAnnotationsByBook()
       chapter = annotation.chapter,
       pageno = annotation.pageno,
       page = annotation.page,
-      total_pages = total_pages, -- Current document total pages (captured at sync time)
+      total_pages = total_pages,
     }
 
-    -- Include datetime_updated if it exists
+    -- Include optional fields if present
     if annotation.datetime_updated then
-      cleaned.datetime_updated = annotation.datetime_updated
+      cleaned_annotation.datetime_updated = annotation.datetime_updated
     end
-
-    -- Include position data for highlights (not bookmarks)
     if annotation.pos0 then
-      cleaned.pos0 = annotation.pos0
+      cleaned_annotation.pos0 = annotation.pos0
     end
     if annotation.pos1 then
-      cleaned.pos1 = annotation.pos1
+      cleaned_annotation.pos1 = annotation.pos1
     end
 
-    table.insert(cleaned_annotations, cleaned)
+    table.insert(cleaned, cleaned_annotation)
+  end
+  return cleaned
+end
+
+-- Extract all necessary data from a book's sidecar file in one read
+-- Returns: md5, annotations, total_pages, book_metadata (or nil if no annotations/md5)
+function KoInsightAnnotationReader.getBookDataFromSidecar(file_path)
+  if not file_path then
+    return nil
   end
 
-  annotations_by_book[book_md5] = cleaned_annotations
-  logger.info("[KoInsight] Prepared", #cleaned_annotations, "annotations for book", book_md5)
+  -- Read-only sidecar open: ideal for bulk operations
+  local doc_settings = open_sidecar_readonly(file_path)
+  if not doc_settings then
+    return nil
+  end
 
-  return annotations_by_book
+  -- Check if book has annotations first
+  local annotations = doc_settings:readSetting("annotations")
+  if not annotations or #annotations == 0 then
+    return nil
+  end
+
+  -- Get MD5
+  local md5 = doc_settings:readSetting("partial_md5_checksum")
+  if not md5 then
+    logger.warn("[KoInsight] No MD5 found in sidecar for:", file_path)
+    return nil
+  end
+
+  -- Get total pages
+  local total_pages = doc_settings:readSetting("doc_pages")
+
+  -- Extract book metadata from sidecar
+  local doc_props = doc_settings:readSetting("doc_props")
+  local stats = doc_settings:readSetting("stats")
+  local summary = doc_settings:readSetting("summary")
+  local percent_finished = doc_settings:readSetting("percent_finished")
+
+  local book_metadata = {
+    md5 = md5,
+    title = (doc_props and doc_props.title) or "Unknown",
+    authors = (doc_props and doc_props.authors) or "Unknown",
+    series = doc_props and doc_props.series,
+    language = doc_props and doc_props.language,
+    pages = total_pages or 0,
+    highlights = (stats and stats.highlights) or 0,
+    notes = (stats and stats.notes) or 0,
+    last_open = (summary and summary.modified) or os.time(),
+  }
+
+  return md5, annotations, total_pages, book_metadata
+end
+
+-- Get annotations for a specific book file path
+function KoInsightAnnotationReader.getAnnotationsForBook(file_path)
+  if not file_path then
+    logger.warn("[KoInsight] No file path provided")
+    return nil, nil
+  end
+
+  logger.dbg("[KoInsight] Reading annotations for:", file_path)
+
+  -- Read-only sidecar open: avoids unintended writes during bulk reads
+  local doc_settings = open_sidecar_readonly(file_path)
+  if not doc_settings then
+    logger.dbg("[KoInsight] No doc settings found for:", file_path)
+    return nil, nil
+  end
+
+  local annotations = doc_settings:readSetting("annotations")
+  if not annotations or #annotations == 0 then
+    logger.dbg("[KoInsight] No annotations found in doc settings")
+    return nil, nil
+  end
+
+  -- Try to get total pages from doc settings (stored per-book)
+  local total_pages = doc_settings:readSetting("doc_pages")
+
+  logger.info("[KoInsight] Found", #annotations, "annotations for:", file_path)
+  return annotations, total_pages
+end
+
+-- Get MD5 hash for a book directly from its sidecar file
+function KoInsightAnnotationReader.getMd5ForPath(file_path)
+  if not file_path then
+    return nil
+  end
+
+  -- Read-only sidecar open: avoids unintended writes during bulk reads
+  local doc_settings = open_sidecar_readonly(file_path)
+  if not doc_settings then
+    return nil
+  end
+
+  -- Read MD5 directly from sidecar file
+  local md5 = doc_settings:readSetting("partial_md5_checksum")
+
+  if md5 then
+    logger.dbg("[KoInsight] Found MD5 in sidecar:", md5)
+  else
+    logger.warn("[KoInsight] No MD5 checksum found in sidecar for:", file_path)
+  end
+
+  return md5
+end
+
+-- Get all books with annotations from reading history
+function KoInsightAnnotationReader.getAllBooksWithAnnotations()
+  local ReadHistory = require("readhistory")
+
+  logger.info("[KoInsight] Starting bulk annotation collection from reading history")
+
+  -- Force flush currently open book settings to disk first
+  -- Only needed if the user is currently in a book, other books should already
+  -- have been flushed settings
+  local ui = get_live_ui()
+  if ui and ui.doc_settings then
+    logger.dbg("[KoInsight] Flushing currently open book's doc settings to disk")
+    ui.doc_settings:flush()
+  end
+
+  if not ReadHistory.hist or #ReadHistory.hist == 0 then
+    logger.info("[KoInsight] No books found in reading history")
+    return {}
+  end
+
+  logger.info("[KoInsight] Found", #ReadHistory.hist, "books in reading history")
+
+  local books_with_annotations = {}
+  local processed_count = 0
+  local skipped_count = 0
+  local error_count = 0
+
+  -- Iterate through all books in history
+  for _, history_entry in ipairs(ReadHistory.hist) do
+    local file_path = history_entry.file
+    processed_count = processed_count + 1
+
+    -- Skip deleted files
+    if history_entry.dim then
+      skipped_count = skipped_count + 1
+      goto continue
+    end
+
+    -- Get all book data in one sidecar read
+    local success, md5, annotations, total_pages, book_metadata =
+      pcall(KoInsightAnnotationReader.getBookDataFromSidecar, file_path)
+
+    if not success then
+      logger.warn("[KoInsight] Error reading sidecar for:", file_path)
+      error_count = error_count + 1
+      goto continue
+    end
+
+    -- Skip books without annotations or MD5
+    if not md5 or not annotations then
+      skipped_count = skipped_count + 1
+      goto continue
+    end
+
+    table.insert(books_with_annotations, {
+      md5 = md5,
+      file_path = file_path,
+      annotations = annotations,
+      total_pages = total_pages,
+      annotation_count = #annotations,
+      book_metadata = book_metadata,
+    })
+    logger.info("[KoInsight] Collected", #annotations, "annotations for:", book_metadata.title)
+
+    ::continue::
+  end
+
+  logger.info(
+    string.format(
+      "[KoInsight] Bulk collection complete: %d books processed, %d with annotations, %d skipped, %d errors",
+      processed_count,
+      #books_with_annotations,
+      skipped_count,
+      error_count
+    )
+  )
+
+  return books_with_annotations
 end
 
 return KoInsightAnnotationReader

@@ -41,7 +41,8 @@ export class UploadService {
   static uploadStatisticData(
     booksToImport: KoReaderBook[],
     newPageStats: PageStat[],
-    annotationsByBook?: Record<string, KoReaderAnnotation[]>
+    annotationsByBook?: Record<string, KoReaderAnnotation[]>,
+    deviceIdOverride?: string // For annotation sync path without stats
   ) {
     return db.transaction(async (trx) => {
       // Insert books
@@ -58,8 +59,13 @@ export class UploadService {
         newBooks.map(({ id, ...book }) => trx<Book>('book').insert(book).onConflict('md5').ignore())
       );
 
-      const hasUnknownDevices =
-        newPageStats.length > 0 && newPageStats[0].device_id === this.UNKNOWN_DEVICE_ID;
+      // Determine device ID: from stats, override, or fall back to unknown device
+      const deviceId =
+        newPageStats.length > 0
+          ? newPageStats[0].device_id
+          : deviceIdOverride || this.UNKNOWN_DEVICE_ID;
+
+      const hasUnknownDevices = deviceId === this.UNKNOWN_DEVICE_ID;
 
       if (hasUnknownDevices) {
         let unknownDevice = await trx<Device>('device')
@@ -76,47 +82,54 @@ export class UploadService {
       }
 
       const newBookDevices: Omit<BookDevice, 'id'>[] = booksToImport.map((book) => ({
-        device_id: newPageStats[0].device_id,
+        device_id: deviceId,
         book_md5: book.md5,
         last_open: book.last_open,
         pages: book.pages,
         notes: book.notes,
         highlights: book.highlights,
-        total_read_pages: book.total_read_pages,
-        total_read_time: book.total_read_time,
+        total_read_pages: book.total_read_pages ?? 0,
+        total_read_time: book.total_read_time ?? 0,
       }));
 
       await Promise.all(
-        newBookDevices.map((bookDevice) =>
-          trx<BookDevice>('book_device')
+        newBookDevices.map((bookDevice) => {
+          const { book_md5, device_id, total_read_time, total_read_pages, ...otherFields } =
+            bookDevice;
+
+          // Always merge these fields
+          const fieldsToMerge: (keyof BookDevice)[] = ['last_open', 'pages', 'notes', 'highlights'];
+
+          // Only merge statistics fields if they have actual values (if on statistics.db sync path)
+          // This prevents annotation-only syncs from overwriting with zeros
+          if (total_read_time !== undefined && total_read_time > 0) {
+            fieldsToMerge.push('total_read_time');
+          }
+          if (total_read_pages !== undefined && total_read_pages > 0) {
+            fieldsToMerge.push('total_read_pages');
+          }
+
+          return trx<BookDevice>('book_device')
             .insert(bookDevice)
             .onConflict(['book_md5', 'device_id'])
-            .merge([
-              'last_open',
-              'pages',
-              'notes',
-              'highlights',
-              'total_read_time',
-              'total_read_pages',
-            ])
-        )
+            .merge(fieldsToMerge);
+        })
       );
 
-      // Insert page stats
-      await Promise.all(
-        newPageStats.map((pageStat) =>
-          trx<PageStat>('page_stat')
-            .insert(pageStat)
-            .onConflict(['device_id', 'book_md5', 'page', 'start_time'])
-            .merge(['duration', 'total_pages'])
-        )
-      );
+      // Insert page stats (only on stats sync path! there are non for annotation sync path)
+      if (newPageStats.length > 0) {
+        await Promise.all(
+          newPageStats.map((pageStat) =>
+            trx<PageStat>('page_stat')
+              .insert(pageStat)
+              .onConflict(['device_id', 'book_md5', 'page', 'start_time'])
+              .merge(['duration', 'total_pages'])
+          )
+        );
+      }
 
       // Insert annotations if provided
       if (annotationsByBook) {
-        const deviceId =
-          newPageStats.length > 0 ? newPageStats[0].device_id : this.UNKNOWN_DEVICE_ID;
-
         await Promise.all(
           Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
             AnnotationsRepository.bulkInsert(bookMd5, deviceId, annotations, trx)

@@ -9,8 +9,9 @@ export type KoReaderBook = {
   pages: number;
   series: string;
   language: string;
-  total_read_time: number;
-  total_read_pages: number;
+  // These fields only come from statistics.db sync, not annotation sync
+  total_read_time?: number;
+  total_read_pages?: number;
 };
 
 export type DbBook = {
