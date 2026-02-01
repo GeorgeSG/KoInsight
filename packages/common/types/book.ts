@@ -1,5 +1,5 @@
 export type KoReaderBook = {
-  id: number; // Optional for annotation-only sync
+  id: number;
   md5: string;
   title: string;
   authors: string;

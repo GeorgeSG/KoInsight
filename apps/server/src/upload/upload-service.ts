@@ -130,22 +130,16 @@ export class UploadService {
 
       // Insert annotations if provided
       if (annotationsByBook) {
-        // Use same deviceId logic as above
-        const annotationDeviceId =
-          newPageStats.length > 0
-            ? newPageStats[0].device_id
-            : deviceIdOverride || this.UNKNOWN_DEVICE_ID;
-
         await Promise.all(
           Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
-            AnnotationsRepository.bulkInsert(bookMd5, annotationDeviceId, annotations, trx)
+            AnnotationsRepository.bulkInsert(bookMd5, deviceId, annotations, trx)
           )
         );
 
         // FIXME: with this, if there is only 1 annotation and it gets removed, it won't get marked as deleted, because `annotationsByBook` will be empty. It will only get marked as deleted if the user adds another annotation to trigger an update on the book.
         await Promise.all(
           Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
-            this.detectAndMarkDeletedAnnotations(bookMd5, annotationDeviceId, annotations, trx)
+            this.detectAndMarkDeletedAnnotations(bookMd5, deviceId, annotations, trx)
           )
         );
       }
