@@ -216,7 +216,7 @@ function KoInsightAnnotationReader.getBookDataFromSidecar(file_path)
     pages = total_pages or 0,
     highlights = (stats and stats.highlights) or 0,
     notes = (stats and stats.notes) or 0,
-    last_open = (summary and summary.modified) or os.time(),
+    last_open = os.time(),
   }
 
   return md5, annotations, total_pages, book_metadata
