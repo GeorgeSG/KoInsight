@@ -109,7 +109,18 @@ function get_md5_by_id(books, target_id)
   return nil
 end
 
+local function flush_statistics_to_db()
+  local ok, ReaderUI = pcall(require, "apps/reader/readerui")
+  if not ok or not ReaderUI or not ReaderUI.instance then return end
+  local ui = ReaderUI.instance
+  if ui and ui.statistics and ui.statistics.is_doc then
+    pcall(function() ui.statistics:insertDB() end)
+    logger.info("[KoInsight] Flushed statistics to DB before sync")
+  end
+end
+
 function KoInsightDbReader.progressData()
+  flush_statistics_to_db()
   local conn = SQ3.open(db_location)
   local result, rows = conn:exec("SELECT * FROM page_stat_data")
   local results = {}
