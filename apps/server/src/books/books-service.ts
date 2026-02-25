@@ -16,6 +16,7 @@ export class BooksService {
   }
 
   static getStartedReading(stats: PageStat[]): number {
+    if (stats.length === 0) return 0;
     return stats.reduce((acc, stat) => Math.min(acc, stat.start_time), Infinity);
   }
 
