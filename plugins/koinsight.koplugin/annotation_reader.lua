@@ -204,7 +204,6 @@ function KoInsightAnnotationReader.getBookDataFromSidecar(file_path)
   -- Extract book metadata from sidecar
   local doc_props = doc_settings:readSetting("doc_props")
   local stats = doc_settings:readSetting("stats")
-  local summary = doc_settings:readSetting("summary")
   local percent_finished = doc_settings:readSetting("percent_finished")
 
   local book_metadata = {
@@ -216,7 +215,7 @@ function KoInsightAnnotationReader.getBookDataFromSidecar(file_path)
     pages = total_pages or 0,
     highlights = (stats and stats.highlights) or 0,
     notes = (stats and stats.notes) or 0,
-    last_open = os.time(),
+    last_open = 0, -- not available from sidecar; statistics sync sets this correctly
   }
 
   return md5, annotations, total_pages, book_metadata
