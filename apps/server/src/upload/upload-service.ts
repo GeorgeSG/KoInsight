@@ -97,8 +97,14 @@ export class UploadService {
           const { book_md5, device_id, total_read_time, total_read_pages, ...otherFields } =
             bookDevice;
 
-          // Always merge these fields
-          const fieldsToMerge: (keyof BookDevice)[] = ['last_open', 'pages', 'notes', 'highlights'];
+          // Always merge these fields (last_open added conditionally below)
+          const fieldsToMerge: (keyof BookDevice)[] = ['pages', 'notes', 'highlights'];
+
+          // Only merge last_open if it's a valid positive Unix timestamp (seconds)
+          const last_open = bookDevice.last_open;
+          if (typeof last_open === 'number' && Number.isFinite(last_open) && last_open > 0) {
+            fieldsToMerge.push('last_open');
+          }
 
           // Only merge statistics fields if they have actual values (if on statistics.db sync path)
           // This prevents annotation-only syncs from overwriting with zeros
@@ -117,9 +123,20 @@ export class UploadService {
       );
 
       // Insert page stats (only on stats sync path! there are non for annotation sync path)
-      if (newPageStats.length > 0) {
+      const validPageStats = newPageStats.filter(
+        (s) =>
+          s.duration != null &&
+          typeof s.duration === 'number' &&
+          Number.isFinite(s.duration) &&
+          s.duration > 0 &&
+          s.total_pages != null &&
+          typeof s.total_pages === 'number' &&
+          Number.isFinite(s.total_pages) &&
+          s.total_pages > 0
+      );
+      if (validPageStats.length > 0) {
         await Promise.all(
-          newPageStats.map((pageStat) =>
+          validPageStats.map((pageStat) =>
             trx<PageStat>('page_stat')
               .insert(pageStat)
               .onConflict(['device_id', 'book_md5', 'page', 'start_time'])
