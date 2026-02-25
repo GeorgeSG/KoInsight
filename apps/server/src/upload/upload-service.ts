@@ -45,6 +45,9 @@ export class UploadService {
     deviceIdOverride?: string // For annotation sync path without stats
   ) {
     return db.transaction(async (trx) => {
+      // Normalize: the plugin sends {} (empty Lua table → JSON object) on the
+      // annotation-only path, not []. Guard all array operations against this.
+      const safePageStats = Array.isArray(newPageStats) ? newPageStats : [];
       // Insert books
       const newBooks: Partial<Book>[] = booksToImport.map((book) => ({
         id: book.id,
@@ -61,8 +64,8 @@ export class UploadService {
 
       // Determine device ID: from stats, override, or fall back to unknown device
       const deviceId =
-        newPageStats.length > 0
-          ? newPageStats[0].device_id
+        safePageStats.length > 0
+          ? safePageStats[0].device_id
           : deviceIdOverride || this.UNKNOWN_DEVICE_ID;
 
       const hasUnknownDevices = deviceId === this.UNKNOWN_DEVICE_ID;
@@ -123,7 +126,7 @@ export class UploadService {
       );
 
       // Insert page stats (only on stats sync path! there are non for annotation sync path)
-      const validPageStats = newPageStats.filter(
+      const validPageStats = safePageStats.filter(
         (s) =>
           s.duration != null &&
           typeof s.duration === 'number' &&
