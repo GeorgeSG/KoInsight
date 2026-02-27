@@ -125,7 +125,7 @@ export class UploadService {
         })
       );
 
-      // Insert page stats (only on stats sync path! there are non for annotation sync path)
+      // Insert page stats (only on stats sync path! there are none for annotation sync path)
       const validPageStats = safePageStats.filter(
         (s) =>
           s.duration != null &&
