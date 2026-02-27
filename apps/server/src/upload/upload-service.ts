@@ -128,11 +128,11 @@ export class UploadService {
       // Insert page stats (only on stats sync path! there are none for annotation sync path)
       const validPageStats = safePageStats.filter(
         (s) =>
-          s.duration != null &&
+          s != null &&
+          typeof s === 'object' &&
           typeof s.duration === 'number' &&
           Number.isFinite(s.duration) &&
           s.duration > 0 &&
-          s.total_pages != null &&
           typeof s.total_pages === 'number' &&
           Number.isFinite(s.total_pages) &&
           s.total_pages > 0
