@@ -72,6 +72,13 @@ describe(BooksService.withData, () => {
 
       expect(result.started_reading).toEqual(1720898518000);
     });
+
+    it('returns 0 if no stats are available', async () => {
+      const book1 = await createBook(db, { title: 'Test Book 1' });
+      const result = await BooksService.withData(book1);
+
+      expect(result.started_reading).toEqual(0);
+    });
   });
 
   describe('read_per_day', () => {
