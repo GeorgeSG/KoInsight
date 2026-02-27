@@ -46,8 +46,19 @@ export class UploadService {
   ) {
     return db.transaction(async (trx) => {
       // Normalize: the plugin sends {} (empty Lua table → JSON object) on the
-      // annotation-only path, not []. Guard all array operations against this.
-      const safePageStats = Array.isArray(newPageStats) ? newPageStats : [];
+      // annotation-only path, not []. Guard all array operations against this,
+      // and drop clearly invalid page stat rows.
+      const safePageStats = (Array.isArray(newPageStats) ? newPageStats : []).filter(
+        (s) =>
+          s != null &&
+          typeof s === 'object' &&
+          typeof s.duration === 'number' &&
+          Number.isFinite(s.duration) &&
+          s.duration > 0 &&
+          typeof s.total_pages === 'number' &&
+          Number.isFinite(s.total_pages) &&
+          s.total_pages > 0
+      );
       // Insert books
       const newBooks: Partial<Book>[] = booksToImport.map((book) => ({
         id: book.id,
@@ -63,9 +74,7 @@ export class UploadService {
       );
 
       // Determine device ID: from stats, override, or fall back to unknown device
-      const firstValidStat = safePageStats.find(
-        (s) => s != null && typeof s === 'object' && typeof s.device_id === 'string'
-      );
+      const firstValidStat = safePageStats.find((s) => typeof s.device_id === 'string');
       const deviceId = firstValidStat?.device_id ?? deviceIdOverride ?? this.UNKNOWN_DEVICE_ID;
 
       const hasUnknownDevices = deviceId === this.UNKNOWN_DEVICE_ID;
@@ -126,20 +135,9 @@ export class UploadService {
       );
 
       // Insert page stats (only on stats sync path! there are none for annotation sync path)
-      const validPageStats = safePageStats.filter(
-        (s) =>
-          s != null &&
-          typeof s === 'object' &&
-          typeof s.duration === 'number' &&
-          Number.isFinite(s.duration) &&
-          s.duration > 0 &&
-          typeof s.total_pages === 'number' &&
-          Number.isFinite(s.total_pages) &&
-          s.total_pages > 0
-      );
-      if (validPageStats.length > 0) {
+      if (safePageStats.length > 0) {
         await Promise.all(
-          validPageStats.map((pageStat) =>
+          safePageStats.map((pageStat) =>
             trx<PageStat>('page_stat')
               .insert(pageStat)
               .onConflict(['device_id', 'book_md5', 'page', 'start_time'])
