@@ -63,10 +63,10 @@ export class UploadService {
       );
 
       // Determine device ID: from stats, override, or fall back to unknown device
-      const deviceId =
-        safePageStats.length > 0
-          ? safePageStats[0].device_id
-          : deviceIdOverride || this.UNKNOWN_DEVICE_ID;
+      const firstValidStat = safePageStats.find(
+        (s) => s != null && typeof s === 'object' && typeof s.device_id === 'string'
+      );
+      const deviceId = firstValidStat?.device_id ?? deviceIdOverride ?? this.UNKNOWN_DEVICE_ID;
 
       const hasUnknownDevices = deviceId === this.UNKNOWN_DEVICE_ID;
 
