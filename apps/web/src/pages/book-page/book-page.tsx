@@ -158,7 +158,7 @@ function StatsCard({ book }: { book: BookWithData }): JSX.Element {
     0;
 
   const readingDays = book ? Object.keys(book.read_per_day).length : 0;
-  const avgPerDay = readingDays > 0 ? book!.total_read_time / readingDays : 0;
+  const avgPerDay = readingDays > 0 ? (book?.total_read_time ?? 0) / readingDays : 0;
 
   return (
     <Paper

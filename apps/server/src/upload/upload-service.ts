@@ -52,10 +52,8 @@ export class UploadService {
         (s) =>
           s != null &&
           typeof s === 'object' &&
-          typeof s.duration === 'number' &&
           Number.isFinite(s.duration) &&
           s.duration > 0 &&
-          typeof s.total_pages === 'number' &&
           Number.isFinite(s.total_pages) &&
           s.total_pages > 0
       );
@@ -74,7 +72,7 @@ export class UploadService {
       );
 
       // Determine device ID: from stats, override, or fall back to unknown device
-      const firstValidStat = safePageStats.find((s) => typeof s.device_id === 'string');
+      const firstValidStat = safePageStats.find((s) => s.device_id);
       const deviceId = firstValidStat?.device_id ?? deviceIdOverride ?? this.UNKNOWN_DEVICE_ID;
 
       const hasUnknownDevices = deviceId === this.UNKNOWN_DEVICE_ID;
@@ -114,7 +112,7 @@ export class UploadService {
 
           // Only merge last_open if it's a valid positive Unix timestamp (seconds)
           const last_open = bookDevice.last_open;
-          if (typeof last_open === 'number' && Number.isFinite(last_open) && last_open > 0) {
+          if (Number.isFinite(last_open) && last_open > 0) {
             fieldsToMerge.push('last_open');
           }
 
