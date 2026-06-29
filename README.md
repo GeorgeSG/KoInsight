@@ -23,6 +23,7 @@
 # Features
 
 - 📈 Interactive dashboard with charts and insights
+- ✏️ Highlights sync
 - 🔄 KOReader plugin for syncing reading stats
 - 📱 Multi-device support
 - 📤 Manual .sqlite upload supported
@@ -73,8 +74,16 @@ services:
 Run `docker compose up -d`.
 
 # Configuration
+KoInsight can be configured using the following environment variables:
 
-The default maximum upload size for the `statistics.sqlite3` file is **100 MB**. This limit can be modified by setting the `MAX_FILE_SIZE_MB` environment variable.
+- `HOSTNAME`: The hostname or IP address where the server will listen.<br>
+  *Default:* `localhost`
+- `PORT`: The port number for the web server.<br>
+  *Default:* `3000`
+- `MAX_FILE_SIZE_MB`: Maximum allowed size (in megabytes) for uploaded files.<br>
+  *Default:* `100`
+- `DATA_PATH`: Path to the directory where KoInsight data (such as stats or uploads) will be stored.<br>
+  *Default:* `../../../data` or `/app/data` in Docker.
 
 # Usage
 
@@ -83,7 +92,7 @@ The default maximum upload size for the `statistics.sqlite3` file is **100 MB**.
 To start seeing data in KoInsight, you need to upload your reading statistics.
 Currently, there are two ways to do this:
 
-1. **Manual upload**: Extract your `statistics.sqlite` file from KOReader and upload it using the **"Upload Statistics DB"** button in KoInsight.
+1. **Manual upload**: Extract your `statistics.sqlite` (in settings folder) file from KOReader and upload it using the **"Upload Statistics DB"** button in KoInsight.
 2. **Sync plugin**: Install and configure the KoInsight plugin in KOReader to sync your data directly.
 
 ### KOReader sync plugin
@@ -133,6 +142,9 @@ You can use your KoInsight instance as a KOReader sync server. This allows you t
 1. Sync your progress.
 
 The progress sync data should appear in the **"Progress syncs"** page in KoInsight.
+
+# Development
+See [DEVELOPMENT.md](DEVELOPMENT.md) for development setup and instructions.
 
 # Roadmap
 (a.k.a things I want to do)

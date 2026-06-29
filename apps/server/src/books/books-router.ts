@@ -17,7 +17,7 @@ router.use('/:bookId/cover', coversRouter);
 router.get('/', async (req: Request, res: Response) => {
   const returnDeleted = Boolean(req.query.showHidden && req.query.showHidden === 'true');
   const books = await BooksRepository.getAllWithData(returnDeleted);
-  res.json(books);
+  res.status(200).json(books);
 });
 
 /**
@@ -25,8 +25,9 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.get('/:bookId', getBookById, async (req: Request, res: Response, next: NextFunction) => {
   const book = req.book!;
-  const bookWithData = await BooksService.withData(book);
-  res.json(bookWithData);
+  const includeDeleted = req.query.includeDeleted === 'true';
+  const bookWithData = await BooksService.withData(book, includeDeleted);
+  res.status(200).json(bookWithData);
 });
 
 /**

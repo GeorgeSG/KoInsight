@@ -7,9 +7,11 @@ import { uploadBookCover } from '../../../api/books';
 
 export type BookUploadCoverProps = {
   book: Book;
+  showTitle?: boolean;
+  onChange?: () => void;
 };
 
-export function BookUploadCover({ book }: BookUploadCoverProps) {
+export function BookUploadCover({ book, showTitle = true, onChange }: BookUploadCoverProps) {
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState('');
 
@@ -24,6 +26,7 @@ export function BookUploadCover({ book }: BookUploadCoverProps) {
       color: 'green',
     });
     setMessage('Cover updated');
+    onChange?.();
     close();
   };
 
@@ -51,19 +54,20 @@ export function BookUploadCover({ book }: BookUploadCoverProps) {
 
   return (
     <div>
-      <Title order={3} mb="md">
-        Upload cover
-      </Title>
+      {showTitle && (
+        <Title order={3} mb="md">
+          Upload cover
+        </Title>
+      )}
       <form onSubmit={handleUpload} encType="multipart/form-data">
         <Flex align="flex-end" gap="md">
           <FileInput
             w={200}
-            label="Choose Book cover"
             placeholder="cover.png"
             onChange={(e) => setFile(e)}
             accept=".png,.jpg,.jpeg,.gif"
           />
-          <Button type="submit" disabled={file === null}>
+          <Button type="submit" color="violet" disabled={file === null}>
             Upload
           </Button>
         </Flex>

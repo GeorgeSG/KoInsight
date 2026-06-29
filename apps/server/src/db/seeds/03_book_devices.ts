@@ -19,4 +19,5 @@ export async function seed(knex: Knex): Promise<void> {
   });
 
   SEEDED_BOOK_DEVICES = await Promise.all(promises);
+  console.log(`✓ Seeded ${SEEDED_BOOK_DEVICES.length} book-device associations`);
 }

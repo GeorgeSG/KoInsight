@@ -2,26 +2,36 @@ import { Book } from '@koinsight/common/types/book';
 import { ActionIcon, Box, Button, Flex, Image, Skeleton, TextInput, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { JSX, useEffect, useState } from 'react';
-import { listCovers, saveCover } from '../../api/open-library';
+import { listCovers, saveCover } from '../../../api/open-library';
 
 import { IconSearch } from '@tabler/icons-react';
 import style from './book-page-cover-selector.module.css';
 
 type BookPageCoverSelectorProps = {
   book: Book;
+  onSave?: () => void;
 };
 
-export function BookPageCoverSelector({ book }: BookPageCoverSelectorProps): JSX.Element {
+export function BookPageCoverSelector({
+  book,
+  onSave: onSaveCover,
+}: BookPageCoverSelectorProps): JSX.Element {
   const [state, setState] = useState<{
     data: string[] | null;
     query: string | null;
     isLoading: boolean;
     loadedCovers: string[];
     isSavingCovers: boolean;
-  }>({ data: null, query: book.title, isLoading: false, loadedCovers: [], isSavingCovers: false });
+  }>({
+    data: null,
+    query: `${book.title} ${book.authors}`,
+    isLoading: false,
+    loadedCovers: [],
+    isSavingCovers: false,
+  });
 
   useEffect(() => {
-    setState((prev) => ({ ...prev, query: book.title }));
+    setState((prev) => ({ ...prev, query: `${book.title} ${book.authors}` }));
   }, [book]);
 
   const onSearch = async () => {
@@ -54,12 +64,15 @@ export function BookPageCoverSelector({ book }: BookPageCoverSelectorProps): JSX
           position: 'top-center',
         })
       )
-      .finally(() => setState((prev) => ({ ...prev, isSavingCovers: false })));
+      .finally(() => {
+        setState((prev) => ({ ...prev, isSavingCovers: false }));
+        onSaveCover?.();
+      });
   };
 
   return (
     <>
-      <Flex mt="lg" gap="sm" direction="row">
+      <Flex gap="sm" direction="row">
         <TextInput
           placeholder="Search query..."
           w={300}

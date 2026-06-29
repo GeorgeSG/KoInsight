@@ -2,11 +2,13 @@ import {
   Book,
   BookDevice,
   Device,
+  KoReaderAnnotation,
   KoReaderBook,
   KoReaderPageStat,
   PageStat,
 } from '@koinsight/common/types';
 import Database, { Database as DatabaseType } from 'better-sqlite3';
+import { AnnotationsRepository } from '../annotations/annotations-repository';
 import { db } from '../knex';
 
 export class UploadService {
@@ -36,8 +38,25 @@ export class UploadService {
     return { newBooks, newPageStats };
   }
 
-  static uploadStatisticData(booksToImport: KoReaderBook[], newPageStats: PageStat[]) {
+  static uploadStatisticData(
+    booksToImport: KoReaderBook[],
+    newPageStats: PageStat[],
+    annotationsByBook?: Record<string, KoReaderAnnotation[]>,
+    deviceIdOverride?: string // For annotation sync path without stats
+  ) {
     return db.transaction(async (trx) => {
+      // Normalize: the plugin sends {} (empty Lua table → JSON object) on the
+      // annotation-only path, not []. Guard all array operations against this,
+      // and drop clearly invalid page stat rows.
+      const safePageStats = (Array.isArray(newPageStats) ? newPageStats : []).filter(
+        (s) =>
+          s != null &&
+          typeof s === 'object' &&
+          Number.isFinite(s.duration) &&
+          s.duration > 0 &&
+          Number.isFinite(s.total_pages) &&
+          s.total_pages > 0
+      );
       // Insert books
       const newBooks: Partial<Book>[] = booksToImport.map((book) => ({
         id: book.id,
@@ -56,8 +75,11 @@ export class UploadService {
         })
       );
 
-      const hasUnknownDevices =
-        newPageStats.length > 0 && newPageStats[0].device_id === this.UNKNOWN_DEVICE_ID;
+      // Determine device ID: from stats, override, or fall back to unknown device
+      const firstValidStat = safePageStats.find((s) => s.device_id);
+      const deviceId = firstValidStat?.device_id ?? deviceIdOverride ?? this.UNKNOWN_DEVICE_ID;
+
+      const hasUnknownDevices = deviceId === this.UNKNOWN_DEVICE_ID;
 
       if (hasUnknownDevices) {
         let unknownDevice = await trx<Device>('device')
@@ -74,43 +96,112 @@ export class UploadService {
       }
 
       const newBookDevices: Omit<BookDevice, 'id'>[] = booksToImport.map((book) => ({
-        device_id: newPageStats[0].device_id,
+        device_id: deviceId,
         book_md5: book.md5,
         last_open: book.last_open,
         pages: book.pages,
         notes: book.notes,
         highlights: book.highlights,
-        total_read_pages: book.total_read_pages,
-        total_read_time: book.total_read_time,
+        total_read_pages: book.total_read_pages ?? 0,
+        total_read_time: book.total_read_time ?? 0,
       }));
 
       await Promise.all(
-        newBookDevices.map((bookDevice) =>
-          trx<BookDevice>('book_device')
+        newBookDevices.map((bookDevice) => {
+          const { book_md5, device_id, total_read_time, total_read_pages, ...otherFields } =
+            bookDevice;
+
+          // Always merge these fields (last_open added conditionally below)
+          const fieldsToMerge: (keyof BookDevice)[] = ['pages', 'notes', 'highlights'];
+
+          // Only merge last_open if it's a valid positive Unix timestamp (seconds)
+          const last_open = bookDevice.last_open;
+          if (Number.isFinite(last_open) && last_open > 0) {
+            fieldsToMerge.push('last_open');
+          }
+
+          // Only merge statistics fields if they have actual values (if on statistics.db sync path)
+          // This prevents annotation-only syncs from overwriting with zeros
+          if (total_read_time !== undefined && total_read_time > 0) {
+            fieldsToMerge.push('total_read_time');
+          }
+          if (total_read_pages !== undefined && total_read_pages > 0) {
+            fieldsToMerge.push('total_read_pages');
+          }
+
+          return trx<BookDevice>('book_device')
             .insert(bookDevice)
             .onConflict(['book_md5', 'device_id'])
-            .merge([
-              'last_open',
-              'pages',
-              'notes',
-              'highlights',
-              'total_read_time',
-              'total_read_pages',
-            ])
-        )
+            .merge(fieldsToMerge);
+        })
       );
 
-      // Insert page stats
-      await Promise.all(
-        newPageStats.map((pageStat) =>
-          trx<PageStat>('page_stat')
-            .insert(pageStat)
-            .onConflict(['device_id', 'book_md5', 'page', 'start_time'])
-            .merge(['duration', 'total_pages'])
-        )
-      );
+      // Insert page stats (only on stats sync path! there are none for annotation sync path)
+      if (safePageStats.length > 0) {
+        await Promise.all(
+          safePageStats.map((pageStat) =>
+            trx<PageStat>('page_stat')
+              .insert(pageStat)
+              .onConflict(['device_id', 'book_md5', 'page', 'start_time'])
+              .merge(['duration', 'total_pages'])
+          )
+        );
+      }
+
+      // Insert annotations if provided
+      if (annotationsByBook) {
+        await Promise.all(
+          Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
+            AnnotationsRepository.bulkInsert(bookMd5, deviceId, annotations, trx)
+          )
+        );
+
+        // FIXME: with this, if there is only 1 annotation and it gets removed, it won't get marked as deleted, because `annotationsByBook` will be empty. It will only get marked as deleted if the user adds another annotation to trigger an update on the book.
+        await Promise.all(
+          Object.entries(annotationsByBook).map(([bookMd5, annotations]) =>
+            this.detectAndMarkDeletedAnnotations(bookMd5, deviceId, annotations, trx)
+          )
+        );
+      }
 
       await trx.commit();
     });
+  }
+
+  /**
+   * Detect annotations that exist in the database but not in the sync data
+   * These annotations were deleted in KoReader and should be marked as deleted
+   *
+   * @param bookMd5 - The book's MD5 hash
+   * @param deviceId - The device ID
+   * @param syncedAnnotations - Annotations received from KoReader
+   * @param trx - Transaction to use
+   */
+  private static async detectAndMarkDeletedAnnotations(
+    bookMd5: string,
+    deviceId: string,
+    syncedAnnotations: KoReaderAnnotation[],
+    trx: any
+  ): Promise<void> {
+    // Get all existing non-deleted annotations for this book and device
+    const existingAnnotations = await trx('annotation')
+      .where({ book_md5: bookMd5, device_id: deviceId })
+      .whereNull('deleted_at')
+      .select('page_ref', 'datetime');
+
+    // Create a Set of identifiers from synced annotations for fast lookup
+    const syncedIdentifiers = new Set(syncedAnnotations.map((a) => `${a.page}|${a.datetime}`));
+
+    // Find annotations that exist in DB but not in synced data
+    const deletedAnnotations = existingAnnotations.filter(
+      (a: { page_ref: string; datetime: string }) =>
+        !syncedIdentifiers.has(`${a.page_ref}|${a.datetime}`)
+    );
+
+    if (deletedAnnotations.length > 0) {
+      await AnnotationsRepository.markManyAsDeleted(bookMd5, deviceId, deletedAnnotations, trx);
+
+      console.log(`Marked ${deletedAnnotations.length} annotations as deleted for book ${bookMd5}`);
+    }
   }
 }

@@ -37,7 +37,7 @@ async function setupServer() {
 
   // Serve react app
   app.use(express.static(appConfig.webBuildPath));
-  app.get('*', (_req: Request, res: Response) => {
+  app.get(/.*/, (_req: Request, res: Response) => {
     res.sendFile(path.join(appConfig.webBuildPath, 'index.html'));
   });
 

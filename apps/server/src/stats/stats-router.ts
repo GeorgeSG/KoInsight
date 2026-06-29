@@ -32,15 +32,16 @@ router.get('/', async (_: Request, res: Response) => {
     totalPagesRead,
   };
 
-  res.json(response);
+  res.status(200).json(response);
 });
 
 /**
  * Get stats by book md5
  */
-router.get('/:book_md5', async (req: Request, res: Response) => {
-  const book = await StatsRepository.getByBookMD5(req.params.book_md5);
-  res.json(book);
+router.get('/:book_md5', async (req: Request<{ book_md5: string }>, res: Response) => {
+  const book_md5 = req.params.book_md5;
+  const book = await StatsRepository.getByBookMD5(book_md5);
+  res.status(200).json(book);
 });
 
 export { router as statsRouter };

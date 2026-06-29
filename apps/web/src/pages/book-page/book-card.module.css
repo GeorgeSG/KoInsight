@@ -10,3 +10,24 @@
   font-weight: 700;
   text-transform: uppercase;
 }
+
+.CoverContainer {
+  position: relative;
+}
+
+.EditIcon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.EditIcon:active {
+  transform: translate(-50%, -50%) !important;
+}
+
+.CoverContainer:hover .EditIcon {
+  opacity: 1;
+}

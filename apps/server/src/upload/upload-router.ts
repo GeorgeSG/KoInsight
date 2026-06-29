@@ -49,7 +49,7 @@ router.post('/', upload.single('file'), async (req, res, next) => {
     const { newBooks, newPageStats } = UploadService.extractDataFromStatisticsDb(db);
     await UploadService.uploadStatisticData(newBooks, newPageStats);
 
-    res.json({ message: 'Database imported successfully' });
+    res.status(200).json({ message: 'Database imported successfully' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to import database' });

@@ -1,3 +1,4 @@
+export * from './annotation';
 export * from './book-device';
 export * from './book';
 export * from './books-api';

@@ -94,4 +94,5 @@ export async function seed(knex: Knex): Promise<void> {
 
   const books = await Promise.all(SEED_BOOKS.map((book) => createBook(db, book)));
   SEEDED_BOOKS = books as Book[];
+  console.log(`✓ Seeded ${SEEDED_BOOKS.length} books`);
 }

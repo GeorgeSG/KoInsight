@@ -108,8 +108,6 @@ export function WeekStats({
     return perDayResult;
   }, [stats, weekStart, weekEnd]);
 
-  console.log({ perDay });
-
   return (
     <>
       <Popover position="bottom-start">

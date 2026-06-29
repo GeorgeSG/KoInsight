@@ -1,3 +1,4 @@
+import { KoReaderAnnotation } from '@koinsight/common/types/annotation';
 import { KoReaderBook } from '@koinsight/common/types/book';
 import { Device } from '@koinsight/common/types/device';
 import { PageStat } from '@koinsight/common/types/page-stat';
@@ -10,12 +11,12 @@ import { UploadService } from '../upload/upload-service';
 // Router for KoInsight koreader plugin
 const router = Router();
 
-const REQUIRED_PLUGIN_VERSION = '0.2.0';
+export const REQUIRED_PLUGIN_VERSION = '0.3.0';
 
 const rejectOldPluginVersion = (req: Request, res: Response, next: NextFunction) => {
   const { version } = req.body;
 
-  if (!version || version !== '0.2.0') {
+  if (!version || version !== REQUIRED_PLUGIN_VERSION) {
     res.status(400).json({
       error: `Unsupported plugin version. Version must be ${REQUIRED_PLUGIN_VERSION}. Please update your KOReader koinsight.koplugin`,
     });
@@ -51,11 +52,19 @@ router.post('/import', rejectOldPluginVersion, async (req, res) => {
 
   const koreaderBooks: KoReaderBook[] = req.body.books;
   const newPageStats: PageStat[] = req.body.stats;
+  const annotations: Record<string, KoReaderAnnotation[]> = req.body.annotations || {};
+  const deviceId: string | undefined = req.body.device_id; // For annotation sync path
 
   try {
     console.debug('Importing books:', koreaderBooks);
     console.debug('Importing page stats:', newPageStats);
-    await UploadService.uploadStatisticData(koreaderBooks, newPageStats);
+    console.debug(
+      'Importing annotations:',
+      Object.keys(annotations).length,
+      'books with annotations'
+    );
+
+    await UploadService.uploadStatisticData(koreaderBooks, newPageStats, annotations, deviceId);
     res.status(200).json({ message: 'Upload successful' });
   } catch (err) {
     console.error(err);
