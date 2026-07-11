@@ -112,6 +112,9 @@ export function BooksPage(): JSX.Element {
           title="No books yet"
           description="It seems like you haven't uploaded any reading statistics yet."
         />
+        {!showHiddenBooks && (
+          <Button onClick={() => setShowHiddenBooks(true)}>Show Hidden Books</Button>
+        )}
       </>
     );
   }
