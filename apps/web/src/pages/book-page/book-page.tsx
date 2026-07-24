@@ -28,6 +28,7 @@ import { sum } from 'ramda';
 import { JSX, useState } from 'react';
 import { useParams } from 'react-router';
 import { useBookWithData } from '../../api/use-book-with-data';
+import { getLatestReadPage } from '../../utils/book-progress';
 import { formatSecondsToHumanReadable } from '../../utils/dates';
 import { BookCard } from './book-card';
 import { BookPageAnnotations } from './book-page-annotations';
@@ -157,6 +158,9 @@ function StatsCard({ book }: { book: BookWithData }): JSX.Element {
     book?.device_data.reduce((acc, device) => Math.max(acc, device.pages), 0) ||
     0;
 
+  const progressPages = getLatestReadPage(book);
+  const progressPercent = bookPages > 0 ? Math.round((progressPages / bookPages) * 100) : 0;
+
   const readingDays = book ? Object.keys(book.read_per_day).length : 0;
   const avgPerDay = readingDays > 0 ? (book?.total_read_time ?? 0) / readingDays : 0;
 
@@ -184,16 +188,16 @@ function StatsCard({ book }: { book: BookWithData }): JSX.Element {
               label={
                 <Stack gap={0} align="center">
                   <Text size="xl" fw={700} ta="center">
-                    {Math.round((book.unique_read_pages / bookPages) * 100)}%
+                    {progressPercent}%
                   </Text>
                   <Text size="xs" c="dimmed" ta="center" fw="bold">
-                    {book.unique_read_pages} / {bookPages} <br /> pages read
+                    {progressPages} / {bookPages} <br /> pages read
                   </Text>
                 </Stack>
               }
               sections={[
                 {
-                  value: (book.unique_read_pages / bookPages) * 100,
+                  value: (progressPages / bookPages) * 100,
                   color: 'koinsight',
                 },
               ]}

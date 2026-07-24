@@ -1,4 +1,4 @@
-import { PageStat } from '@koinsight/common/types';
+import { BookWithData, PageStat } from '@koinsight/common/types';
 import { Book } from '@koinsight/common/types/book';
 import { Anchor, Flex, Loader, Title } from '@mantine/core';
 import { IconClock } from '@tabler/icons-react';
@@ -11,6 +11,7 @@ import { usePageStats } from '../api/use-page-stats';
 import { Calendar, CalendarEvent } from '../components/calendar/calendar';
 import { getBookPath } from '../routes';
 import { getDuration, shortDuration } from '../utils/dates';
+import { CalendarBookDay } from '../components/calendar/calendar-book-day';
 
 type DayData = {
   events: PageStat[];
@@ -53,27 +54,23 @@ export function CalendarPage(): JSX.Element {
   const getBookNames = useCallback(
     (data: DayData) => {
       const uniqueBookMd5s = uniq(data.events.map(({ book_md5 }) => book_md5));
-      const eventBooks = uniqueBookMd5s.map((id) => getBookByMd5(id)).filter(Boolean) as Book[];
+      const eventBooks = uniqueBookMd5s.map((id) => getBookByMd5(id)).filter(Boolean) as BookWithData[];
 
-      return eventBooks.map((book) => (
-        <>
-          <Anchor key={book.id} component={Link} to={getBookPath(book.id)}>
-            {book.title}
-          </Anchor>
-          <br />
-          <IconClock size={14} />{' '}
-          {shortDuration(
-            getDuration(
-              sum(
-                data.events
-                  .filter((event) => event.book_md5 === book.md5)
-                  .map((event) => event.duration)
-              )
-            )
-          )}
-          <br />
-        </>
-      ));
+      return eventBooks.map((book) => {
+
+        const bookDayData = data.events.filter((event) => event.book_md5 === book.md5);
+        
+        return (
+          <>
+            <Anchor key={book.id} component={Link} to={getBookPath(book.id)}>
+              {book.title}
+            </Anchor>
+            <br />
+            <CalendarBookDay book={book} data={{ events: bookDayData }} />
+            <br />
+          </>
+        );
+      });
     },
     [getBookByMd5]
   );
