@@ -17,7 +17,7 @@ import {
   IconFlame,
   IconTrophy,
 } from '@tabler/icons-react';
-import { format, startOfDay } from 'date-fns';
+import { differenceInCalendarDays, format, startOfDay } from 'date-fns';
 import { JSX, useMemo } from 'react';
 import { BarProps } from 'recharts';
 import { useBooks } from '../../api/books';
@@ -113,7 +113,7 @@ export function StatsPage(): JSX.Element {
     for (let i = 1; i < uniqueDays.length; i += 1) {
       const currentDay = uniqueDays[i];
       const previousDay = uniqueDays[i - 1];
-      const isConsecutive = currentDay - previousDay === 24 * 60 * 60 * 1000;
+      const isConsecutive = differenceInCalendarDays(currentDay, previousDay) === 1;
 
       if (isConsecutive) {
         currentEnd = currentDay;
@@ -134,6 +134,7 @@ export function StatsPage(): JSX.Element {
     if (currentLength > bestLength) {
       bestStart = currentStart;
       bestEnd = currentEnd;
+      bestLength = currentLength;
     }
 
     return {
