@@ -77,13 +77,19 @@ export class StatsService {
       return 0;
     }
 
-    const uniqueDays = new Set(this.getUniqueReadingDays(stats));
-
-    let streak = 0;
     const today = startOfDay(new Date()).getTime();
-    let currentDay = uniqueDays.has(today) ? today : startOfDay(subDays(today, 1)).getTime();
+    const uniqueDays = this.getUniqueReadingDays(stats).filter((day) => day <= today);
+    const latestReadingDay = uniqueDays[uniqueDays.length - 1];
 
-    while (uniqueDays.has(currentDay)) {
+    if (latestReadingDay === undefined || differenceInCalendarDays(today, latestReadingDay) > 1) {
+      return 0;
+    }
+
+    const readingDays = new Set(uniqueDays);
+    let streak = 0;
+    let currentDay = latestReadingDay;
+
+    while (readingDays.has(currentDay)) {
       streak += 1;
       currentDay = startOfDay(subDays(currentDay, 1)).getTime();
     }

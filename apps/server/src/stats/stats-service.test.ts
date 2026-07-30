@@ -253,6 +253,24 @@ describe(StatsService, () => {
       const result = StatsService.currentDailyReadingStreak(stats);
       expect(result).toEqual(0);
     });
+
+    it('returns current streak when a historical streak is longer', () => {
+      const today = startOfDay(new Date('2025-04-10T15:00:00.000Z')).getTime();
+      vi.useFakeTimers();
+      vi.setSystemTime(today);
+
+      const stats = [1, 2, 5, 6, 7, 8, 9].map((daysAgo, index) => ({
+        page: index,
+        start_time: subDays(today, daysAgo).getTime(),
+        duration: 60,
+        total_pages: 100,
+        device_id: device.id,
+        book_md5: book.md5,
+      }));
+
+      expect(StatsService.currentDailyReadingStreak(stats)).toEqual(2);
+      expect(StatsService.longestDailyReadingStreak(stats)).toEqual(5);
+    });
   });
 
   describe(StatsService.longestDailyReadingStreak, () => {
