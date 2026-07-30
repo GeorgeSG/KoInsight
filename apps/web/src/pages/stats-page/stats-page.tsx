@@ -9,7 +9,15 @@ import {
   useComputedColorScheme,
   useMantineTheme,
 } from '@mantine/core';
-import { IconClock, IconMaximize, IconPageBreak } from '@tabler/icons-react';
+import {
+  IconFiles,
+  IconFileStar,
+  IconClock,
+  IconClockStar,
+  IconFlame,
+  IconTrophy,
+} from '@tabler/icons-react';
+import { format, startOfDay } from 'date-fns';
 import { JSX, useMemo } from 'react';
 import { BarProps } from 'recharts';
 import { useBooks } from '../../api/books';
@@ -34,6 +42,8 @@ export function StatsPage(): JSX.Element {
       totalReadingTime,
       longestDay,
       last7DaysReadTime,
+      currentDailyReadingStreak,
+      longestDailyReadingStreak,
       totalPagesRead,
     },
     isLoading: statsLoading,
@@ -48,6 +58,90 @@ export function StatsPage(): JSX.Element {
       {} as Record<string, Book>
     );
   }, [books]);
+
+  const formatStreakDays = (value: number) => `${value} day${value === 1 ? '' : 's'}`;
+  const formatLocalizedNumber = (value: number) => new Intl.NumberFormat().format(value);
+
+  const formatStatDate = (dayTimestamp?: number) =>
+    dayTimestamp ? format(dayTimestamp, 'MMM d, yyyy') : 'No reading data yet';
+
+  const { longestDayTimestamp, mostPagesDayTimestamp, longestStreakRange } = useMemo(() => {
+    if (!stats?.length) {
+      return {
+        longestDayTimestamp: undefined,
+        mostPagesDayTimestamp: undefined,
+        longestStreakRange: undefined,
+      };
+    }
+
+    const durationPerDay = new Map<number, number>();
+    const pagesPerDay = new Map<number, number>();
+
+    for (const stat of stats) {
+      const dayStart = startOfDay(stat.start_time).getTime();
+      durationPerDay.set(dayStart, (durationPerDay.get(dayStart) ?? 0) + stat.duration);
+
+      const referencePages = booksByMd5?.[stat.book_md5]?.reference_pages;
+      const pagesForStat = stat.total_pages && referencePages ? (1 / stat.total_pages) * referencePages : 1;
+      pagesPerDay.set(dayStart, (pagesPerDay.get(dayStart) ?? 0) + pagesForStat);
+    }
+
+    let longestDayEntry: [number, number] | undefined;
+    for (const entry of durationPerDay.entries()) {
+      if (!longestDayEntry || entry[1] > longestDayEntry[1]) {
+        longestDayEntry = entry;
+      }
+    }
+
+    let mostPagesEntry: [number, number] | undefined;
+    for (const entry of pagesPerDay.entries()) {
+      if (!mostPagesEntry || entry[1] > mostPagesEntry[1]) {
+        mostPagesEntry = entry;
+      }
+    }
+
+    const uniqueDays = Array.from(durationPerDay.keys()).sort((a, b) => a - b);
+
+    let bestStart = uniqueDays[0];
+    let bestEnd = uniqueDays[0];
+    let bestLength = 1;
+
+    let currentStart = uniqueDays[0];
+    let currentEnd = uniqueDays[0];
+    let currentLength = 1;
+
+    for (let i = 1; i < uniqueDays.length; i += 1) {
+      const currentDay = uniqueDays[i];
+      const previousDay = uniqueDays[i - 1];
+      const isConsecutive = currentDay - previousDay === 24 * 60 * 60 * 1000;
+
+      if (isConsecutive) {
+        currentEnd = currentDay;
+        currentLength += 1;
+      } else {
+        if (currentLength > bestLength) {
+          bestStart = currentStart;
+          bestEnd = currentEnd;
+          bestLength = currentLength;
+        }
+
+        currentStart = currentDay;
+        currentEnd = currentDay;
+        currentLength = 1;
+      }
+    }
+
+    if (currentLength > bestLength) {
+      bestStart = currentStart;
+      bestEnd = currentEnd;
+    }
+
+    return {
+      longestDayTimestamp: longestDayEntry?.[0],
+      mostPagesDayTimestamp: mostPagesEntry?.[0],
+      longestStreakRange: `${format(bestStart, 'MMM d, yyyy')} - ${format(bestEnd, 'MMM d, yyyy')}`,
+    };
+  }, [stats, booksByMd5]);
 
   if (booksLoading || statsLoading) {
     return (
@@ -88,18 +182,34 @@ export function StatsPage(): JSX.Element {
             },
             {
               label: 'Total pages read',
-              value: totalPagesRead,
-              icon: IconPageBreak,
+              value: formatLocalizedNumber(totalPagesRead),
+              icon: IconFiles,
             },
             {
               label: 'Longest time reading in a day',
               value: formatSecondsToHumanReadable(longestDay),
-              icon: IconMaximize,
+              detail: formatStatDate(longestDayTimestamp),
+              icon: IconClockStar,
             },
             {
               label: 'Most pages in a day',
-              value: mostPagesInADay ?? 'N/A',
-              icon: IconMaximize,
+              value:
+                mostPagesInADay !== null && mostPagesInADay !== undefined
+                  ? formatLocalizedNumber(mostPagesInADay)
+                  : 'N/A',
+              detail: formatStatDate(mostPagesDayTimestamp),
+              icon: IconFileStar,
+            },
+            {
+              label: 'Current Daily Reading Streak',
+              value: formatStreakDays(currentDailyReadingStreak),
+              icon: IconFlame,
+            },
+            {
+              label: 'Longest Daily Reading Streak',
+              value: formatStreakDays(longestDailyReadingStreak),
+              detail: longestStreakRange ?? 'N/A',
+              icon: IconTrophy,
             },
           ]}
         />

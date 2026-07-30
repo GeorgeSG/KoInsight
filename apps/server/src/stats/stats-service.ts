@@ -5,7 +5,7 @@ import {
   PerDayOfTheWeek,
   PerMonthReadingTime,
 } from '@koinsight/common/types';
-import { format, startOfDay, subDays } from 'date-fns';
+import { differenceInCalendarDays, format, startOfDay, subDays } from 'date-fns';
 import { groupBy, sum } from 'ramda';
 
 export class StatsService {
@@ -72,8 +72,54 @@ export class StatsService {
     return sum(lastSevenDays.map((s) => s.duration));
   }
 
+  static currentDailyReadingStreak(stats: PageStat[]) {
+    if (!stats?.length) {
+      return 0;
+    }
+
+    const uniqueDays = new Set(this.getUniqueReadingDays(stats));
+
+    let streak = 0;
+    let currentDay = startOfDay(new Date()).getTime();
+
+    while (uniqueDays.has(currentDay)) {
+      streak += 1;
+      currentDay = startOfDay(subDays(currentDay, 1)).getTime();
+    }
+
+    return streak;
+  }
+
+  static longestDailyReadingStreak(stats: PageStat[]) {
+    const uniqueDays = this.getUniqueReadingDays(stats);
+
+    if (!uniqueDays.length) {
+      return 0;
+    }
+
+    let longestStreak = 1;
+    let currentStreak = 1;
+
+    for (let i = 1; i < uniqueDays.length; i += 1) {
+      if (differenceInCalendarDays(uniqueDays[i], uniqueDays[i - 1]) === 1) {
+        currentStreak += 1;
+      } else {
+        longestStreak = Math.max(longestStreak, currentStreak);
+        currentStreak = 1;
+      }
+    }
+
+    return Math.max(longestStreak, currentStreak);
+  }
+
   static totalPagesRead(books: BookWithData[]) {
     return books.reduce((acc, book) => acc + book.total_read_pages, 0);
+  }
+
+  private static getUniqueReadingDays(stats: PageStat[]) {
+    return Array.from(new Set(stats.map((stat) => startOfDay(stat.start_time).getTime()))).sort(
+      (a, b) => a - b
+    );
   }
 
   private static getPagesPerDay(stats: PageStat[], books: Book[]) {

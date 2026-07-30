@@ -38,5 +38,7 @@ describe('GET /stats', () => {
     expect(body).toHaveProperty('perMonth');
     expect(body.longestDay).toBe(20);
     expect(body.totalPagesRead).toBe(4);
+    expect(body).toHaveProperty('currentDailyReadingStreak');
+    expect(body).toHaveProperty('longestDailyReadingStreak');
   });
 });

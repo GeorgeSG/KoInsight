@@ -21,5 +21,7 @@ export type GetAllStatsResponse = {
   totalReadingTime: number;
   longestDay: number;
   last7DaysReadTime: number;
+  currentDailyReadingStreak: number;
+  longestDailyReadingStreak: number;
   totalPagesRead: number;
 };

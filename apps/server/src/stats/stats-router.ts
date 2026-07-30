@@ -20,6 +20,8 @@ router.get('/', async (_: Request, res: Response) => {
   const totalReadingTime = StatsService.totalReadingTime(stats);
   const longestDay = StatsService.longestDay(stats);
   const last7DaysReadTime = StatsService.last7DaysReadTime(stats);
+  const currentDailyReadingStreak = StatsService.currentDailyReadingStreak(stats);
+  const longestDailyReadingStreak = StatsService.longestDailyReadingStreak(stats);
 
   const response: GetAllStatsResponse = {
     stats,
@@ -29,6 +31,8 @@ router.get('/', async (_: Request, res: Response) => {
     totalReadingTime,
     longestDay,
     last7DaysReadTime,
+    currentDailyReadingStreak,
+    longestDailyReadingStreak,
     totalPagesRead,
   };
 

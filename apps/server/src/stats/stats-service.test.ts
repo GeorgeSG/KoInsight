@@ -6,7 +6,7 @@ import { createDevice } from '../db/factories/device-factory';
 import { createPageStat } from '../db/factories/page-stat-factory';
 import { db } from '../knex';
 import { StatsService } from './stats-service';
-import { subDays } from 'date-fns';
+import { startOfDay, subDays } from 'date-fns';
 
 describe(StatsService, () => {
   let device: Device;
@@ -191,6 +191,70 @@ describe(StatsService, () => {
 
     it('returns 0 with no stats', async () => {
       const result = await StatsService.last7DaysReadTime([]);
+      expect(result).toEqual(0);
+    });
+  });
+
+  describe(StatsService.currentDailyReadingStreak, () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('returns streak ending today', () => {
+      const today = startOfDay(new Date('2025-04-10T15:00:00.000Z')).getTime();
+      vi.useFakeTimers();
+      vi.setSystemTime(today);
+
+      const stats = [0, 1, 2, 5].map((daysAgo, index) => ({
+        page: index,
+        start_time: subDays(today, daysAgo).getTime(),
+        duration: 60,
+        total_pages: 100,
+        device_id: device.id,
+        book_md5: book.md5,
+      }));
+
+      const result = StatsService.currentDailyReadingStreak(stats);
+      expect(result).toEqual(3);
+    });
+
+    it('returns 0 when today has no reading activity', () => {
+      const today = startOfDay(new Date('2025-04-10T15:00:00.000Z')).getTime();
+      vi.useFakeTimers();
+      vi.setSystemTime(today);
+
+      const stats = [1, 2, 3].map((daysAgo, index) => ({
+        page: index,
+        start_time: subDays(today, daysAgo).getTime(),
+        duration: 60,
+        total_pages: 100,
+        device_id: device.id,
+        book_md5: book.md5,
+      }));
+
+      const result = StatsService.currentDailyReadingStreak(stats);
+      expect(result).toEqual(0);
+    });
+  });
+
+  describe(StatsService.longestDailyReadingStreak, () => {
+    it('returns the longest consecutive daily streak', () => {
+      const anchor = startOfDay(new Date('2025-04-10T15:00:00.000Z')).getTime();
+      const stats = [0, 1, 2, 4, 6, 7, 8, 9].map((daysAgo, index) => ({
+        page: index,
+        start_time: subDays(anchor, daysAgo).getTime(),
+        duration: 60,
+        total_pages: 100,
+        device_id: device.id,
+        book_md5: book.md5,
+      }));
+
+      const result = StatsService.longestDailyReadingStreak(stats);
+      expect(result).toEqual(4);
+    });
+
+    it('returns 0 with no stats', () => {
+      const result = StatsService.longestDailyReadingStreak([]);
       expect(result).toEqual(0);
     });
   });
