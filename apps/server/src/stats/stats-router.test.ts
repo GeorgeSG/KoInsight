@@ -36,9 +36,10 @@ describe('GET /stats', () => {
 
     // TODO: Do we need a more detailed test here provided everything is from the StatsService?
     expect(body).toHaveProperty('perMonth');
-    expect(body.longestDay).toBe(20);
+    expect(body.longestDay.duration).toBe(20);
+    expect(body.mostPagesInADay).toHaveProperty('pages');
     expect(body.totalPagesRead).toBe(4);
     expect(body).toHaveProperty('currentDailyReadingStreak');
-    expect(body).toHaveProperty('longestDailyReadingStreak');
+    expect(body.longestDailyReadingStreak).toHaveProperty('days');
   });
 });

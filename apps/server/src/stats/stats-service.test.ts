@@ -102,18 +102,23 @@ describe(StatsService, () => {
 
       stats.push(
         await createPageStat(db, book, bookDevice, device, {
+          page: 10,
           start_time: new Date(2025, 1, 1).getTime(),
         })
       );
 
       stats.push(
         await createPageStat(db, book, bookDevice, device, {
+          page: 11,
           start_time: new Date(2025, 1, 1).getTime(),
         })
       );
 
       const result = await StatsService.mostPagesInADay([book], stats);
-      expect(result).toEqual(3);
+      expect(result).toEqual({
+        pages: 3,
+        timestamp: startOfDay(new Date(2025, 1, 1)).getTime(),
+      });
     });
 
     it('works with reference pages', async () => {
@@ -131,23 +136,25 @@ describe(StatsService, () => {
 
       stats.push(
         await createPageStat(db, book, bookDevice, device, {
+          page: 10,
           start_time: new Date(2025, 1, 1).getTime(),
         })
       );
 
       stats.push(
         await createPageStat(db, book, bookDevice, device, {
+          page: 11,
           start_time: new Date(2025, 1, 1).getTime(),
         })
       );
 
       const result = await StatsService.mostPagesInADay([book], stats);
-      expect(result).toEqual(2); // result is rounded
+      expect(result.pages).toEqual(2); // result is rounded
     });
 
     it('returns 0 with no stats', async () => {
       const result = await StatsService.mostPagesInADay([book], []);
-      expect(result).toEqual(0);
+      expect(result).toEqual({ pages: 0 });
     });
   });
 
@@ -164,12 +171,15 @@ describe(StatsService, () => {
       );
 
       const result = await StatsService.longestDay(stats);
-      expect(result).toEqual(40);
+      expect(result).toEqual({
+        duration: 40,
+        timestamp: startOfDay(new Date(2025, 1, 5)).getTime(),
+      });
     });
 
     it('returns 0 with no stats', async () => {
       const result = await StatsService.longestDay([]);
-      expect(result).toEqual(0);
+      expect(result).toEqual({ duration: 0 });
     });
   });
 
@@ -269,7 +279,7 @@ describe(StatsService, () => {
       }));
 
       expect(StatsService.currentDailyReadingStreak(stats)).toEqual(2);
-      expect(StatsService.longestDailyReadingStreak(stats)).toEqual(5);
+      expect(StatsService.longestDailyReadingStreak(stats).days).toEqual(5);
     });
   });
 
@@ -286,12 +296,16 @@ describe(StatsService, () => {
       }));
 
       const result = StatsService.longestDailyReadingStreak(stats);
-      expect(result).toEqual(4);
+      expect(result).toEqual({
+        days: 4,
+        start: startOfDay(subDays(anchor, 9)).getTime(),
+        end: startOfDay(subDays(anchor, 6)).getTime(),
+      });
     });
 
     it('returns 0 with no stats', () => {
       const result = StatsService.longestDailyReadingStreak([]);
-      expect(result).toEqual(0);
+      expect(result).toEqual({ days: 0 });
     });
   });
 

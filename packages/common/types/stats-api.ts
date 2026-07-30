@@ -13,15 +13,31 @@ export type PerDayOfTheWeek = {
   day: number;
 };
 
+export type ReadingPageStat = {
+  pages: number;
+  timestamp?: number;
+};
+
+export type ReadingDayStat = {
+  duration: number;
+  timestamp?: number;
+};
+
+export type DailyReadingStreak = {
+  days: number;
+  start?: number;
+  end?: number;
+};
+
 export type GetAllStatsResponse = {
   stats: PageStat[];
   perMonth: PerMonthReadingTime[];
   perDayOfTheWeek: PerDayOfTheWeek[];
-  mostPagesInADay: number;
+  mostPagesInADay: ReadingPageStat;
   totalReadingTime: number;
-  longestDay: number;
+  longestDay: ReadingDayStat;
   last7DaysReadTime: number;
   currentDailyReadingStreak: number;
-  longestDailyReadingStreak: number;
+  longestDailyReadingStreak: DailyReadingStreak;
   totalPagesRead: number;
 };

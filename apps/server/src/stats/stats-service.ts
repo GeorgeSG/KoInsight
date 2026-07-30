@@ -1,6 +1,9 @@
 import {
   Book,
   BookWithData,
+  DailyReadingStreak,
+  ReadingDayStat,
+  ReadingPageStat,
   PageStat,
   PerDayOfTheWeek,
   PerMonthReadingTime,
@@ -46,24 +49,51 @@ export class StatsService {
       .sort((a, b) => a.day - b.day);
   }
 
-  static mostPagesInADay(books: Book[], stats: PageStat[]) {
-    const max = Math.round(Math.max(...this.getPagesPerDay(stats, books)));
-    return Math.max(0, max);
+  static mostPagesInADay(books: Book[], stats: PageStat[]): ReadingPageStat {
+    const pagesPerDay = this.getPagesPerDayEntries(stats, books);
+    const maxPagesDay = pagesPerDay.reduce<[number, number] | undefined>((max, entry) => {
+      if (!max || entry[1] > max[1]) {
+        return entry;
+      }
+
+      return max;
+    }, undefined);
+
+    if (!maxPagesDay) {
+      return { pages: 0 };
+    }
+
+    return {
+      pages: Math.max(0, Math.round(maxPagesDay[1])),
+      timestamp: maxPagesDay[0],
+    };
   }
 
   static totalReadingTime(stats: PageStat[]) {
     return sum((stats ?? []).map((s) => s.duration));
   }
 
-  static longestDay(stats: PageStat[]) {
-    const timePerDay = stats.reduce<Record<number, number>>((acc, stat) => {
-      const day = startOfDay(stat.start_time).getTime();
-      acc[day] = (acc[day] || 0) + stat.duration;
-      return acc;
-    }, {});
+  static longestDay(stats: PageStat[]): ReadingDayStat {
+    const timePerDay = this.getTimePerDay(stats);
+    const longestDayEntry = Object.entries(timePerDay).reduce<[number, number] | undefined>(
+      (max, [day, duration]) => {
+        if (!max || duration > max[1]) {
+          return [Number(day), duration];
+        }
 
-    const maxTime = Math.max(...Object.values(timePerDay ?? []));
-    return Math.max(0, maxTime);
+        return max;
+      },
+      undefined
+    );
+
+    if (!longestDayEntry) {
+      return { duration: 0 };
+    }
+
+    return {
+      duration: Math.max(0, longestDayEntry[1]),
+      timestamp: longestDayEntry[0],
+    };
   }
 
   static last7DaysReadTime(stats: PageStat[]) {
@@ -97,26 +127,15 @@ export class StatsService {
     return streak;
   }
 
-  static longestDailyReadingStreak(stats: PageStat[]) {
+  static longestDailyReadingStreak(stats: PageStat[]): DailyReadingStreak {
     const uniqueDays = this.getUniqueReadingDays(stats);
+    const longestStreak = this.getLongestDailyReadingStreak(uniqueDays);
 
-    if (!uniqueDays.length) {
-      return 0;
+    if (!longestStreak) {
+      return { days: 0 };
     }
 
-    let longestStreak = 1;
-    let currentStreak = 1;
-
-    for (let i = 1; i < uniqueDays.length; i += 1) {
-      if (differenceInCalendarDays(uniqueDays[i], uniqueDays[i - 1]) === 1) {
-        currentStreak += 1;
-      } else {
-        longestStreak = Math.max(longestStreak, currentStreak);
-        currentStreak = 1;
-      }
-    }
-
-    return Math.max(longestStreak, currentStreak);
+    return longestStreak;
   }
 
   static totalPagesRead(books: BookWithData[]) {
@@ -129,7 +148,52 @@ export class StatsService {
     );
   }
 
-  private static getPagesPerDay(stats: PageStat[], books: Book[]) {
+  private static getLongestDailyReadingStreak(uniqueDays: number[]) {
+    if (!uniqueDays.length) {
+      return undefined;
+    }
+
+    let longestStreak = {
+      start: uniqueDays[0],
+      end: uniqueDays[0],
+      days: 1,
+    };
+
+    let currentStreak = { ...longestStreak };
+
+    for (let i = 1; i < uniqueDays.length; i += 1) {
+      if (differenceInCalendarDays(uniqueDays[i], uniqueDays[i - 1]) === 1) {
+        currentStreak.end = uniqueDays[i];
+        currentStreak.days += 1;
+      } else {
+        if (currentStreak.days > longestStreak.days) {
+          longestStreak = { ...currentStreak };
+        }
+
+        currentStreak = {
+          start: uniqueDays[i],
+          end: uniqueDays[i],
+          days: 1,
+        };
+      }
+    }
+
+    if (currentStreak.days > longestStreak.days) {
+      longestStreak = { ...currentStreak };
+    }
+
+    return longestStreak;
+  }
+
+  private static getTimePerDay(stats: PageStat[]) {
+    return stats.reduce<Record<number, number>>((acc, stat) => {
+      const day = startOfDay(stat.start_time).getTime();
+      acc[day] = (acc[day] || 0) + stat.duration;
+      return acc;
+    }, {});
+  }
+
+  private static getPagesPerDayEntries(stats: PageStat[], books: Book[]) {
     const booksByMd5 = books?.reduce(
       (acc, book) => {
         acc[book.md5] = book;
@@ -142,18 +206,19 @@ export class StatsService {
       startOfDay(stat.start_time).getTime().toString()
     )(stats);
 
-    const pagesPerDay = Object.values(statsPerDay).map(
-      (dayStats) =>
-        dayStats?.reduce((acc, stat) => {
-          if (stat.total_pages && booksByMd5[stat.book_md5]?.reference_pages) {
-            return acc + (1 / stat.total_pages) * booksByMd5[stat.book_md5].reference_pages!;
-          } else {
-            return acc + 1;
-          }
-        }, 0) ?? 0
+    return Object.entries(statsPerDay).map(
+      ([day, dayStats]) =>
+        [
+          Number(day),
+          dayStats?.reduce((acc, stat) => {
+            if (stat.total_pages && booksByMd5[stat.book_md5]?.reference_pages) {
+              return acc + (1 / stat.total_pages) * booksByMd5[stat.book_md5].reference_pages!;
+            } else {
+              return acc + 1;
+            }
+          }, 0) ?? 0,
+        ] as [number, number]
     );
-
-    return pagesPerDay;
   }
 }
 
