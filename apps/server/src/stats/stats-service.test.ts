@@ -218,12 +218,30 @@ describe(StatsService, () => {
       expect(result).toEqual(3);
     });
 
-    it('returns 0 when today has no reading activity', () => {
+    it('returns streak ending yesterday when today has no reading activity', () => {
       const today = startOfDay(new Date('2025-04-10T15:00:00.000Z')).getTime();
       vi.useFakeTimers();
       vi.setSystemTime(today);
 
       const stats = [1, 2, 3].map((daysAgo, index) => ({
+        page: index,
+        start_time: subDays(today, daysAgo).getTime(),
+        duration: 60,
+        total_pages: 100,
+        device_id: device.id,
+        book_md5: book.md5,
+      }));
+
+      const result = StatsService.currentDailyReadingStreak(stats);
+      expect(result).toEqual(3);
+    });
+
+    it('returns 0 when neither today nor yesterday has reading activity', () => {
+      const today = startOfDay(new Date('2025-04-10T15:00:00.000Z')).getTime();
+      vi.useFakeTimers();
+      vi.setSystemTime(today);
+
+      const stats = [2, 3, 4].map((daysAgo, index) => ({
         page: index,
         start_time: subDays(today, daysAgo).getTime(),
         duration: 60,
@@ -290,3 +308,4 @@ describe(StatsService, () => {
     });
   });
 });
+

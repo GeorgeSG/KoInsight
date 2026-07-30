@@ -80,7 +80,8 @@ export class StatsService {
     const uniqueDays = new Set(this.getUniqueReadingDays(stats));
 
     let streak = 0;
-    let currentDay = startOfDay(new Date()).getTime();
+    const today = startOfDay(new Date()).getTime();
+    let currentDay = uniqueDays.has(today) ? today : startOfDay(subDays(today, 1)).getTime();
 
     while (uniqueDays.has(currentDay)) {
       streak += 1;
@@ -149,3 +150,4 @@ export class StatsService {
     return pagesPerDay;
   }
 }
+
