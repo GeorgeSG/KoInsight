@@ -15,18 +15,18 @@ export type PerDayOfTheWeek = {
 
 export type ReadingPageStat = {
   pages: number;
-  timestamp?: number;
+  date?: string;
 };
 
 export type ReadingDayStat = {
   duration: number;
-  timestamp?: number;
+  date?: string;
 };
 
 export type DailyReadingStreak = {
   days: number;
-  start?: number;
-  end?: number;
+  start?: string;
+  end?: string;
 };
 
 export type GetAllStatsResponse = {

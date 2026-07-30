@@ -62,12 +62,12 @@ export function StatsPage(): JSX.Element {
   const formatStreakDays = (value: number) => `${value} day${value === 1 ? '' : 's'}`;
   const formatLocalizedNumber = (value: number) => new Intl.NumberFormat().format(value);
 
-  const formatStatDate = (dayTimestamp?: number) =>
-    dayTimestamp ? format(dayTimestamp, 'MMM d, yyyy') : 'No reading data yet';
+  const formatDateKey = (dateKey?: string) =>
+    dateKey ? format(new Date(`${dateKey}T12:00:00`), 'MMM d, yyyy') : 'No reading data yet';
 
-  const formatDateRange = (dateRange?: { start?: number; end?: number }) =>
+  const formatDateRange = (dateRange?: { start?: string; end?: string }) =>
     dateRange?.start && dateRange.end
-      ? `${format(dateRange.start, 'MMM d, yyyy')} - ${format(dateRange.end, 'MMM d, yyyy')}`
+      ? `${formatDateKey(dateRange.start)} - ${formatDateKey(dateRange.end)}`
       : 'N/A';
 
   if (booksLoading || statsLoading) {
@@ -115,7 +115,7 @@ export function StatsPage(): JSX.Element {
             {
               label: 'Longest time reading in a day',
               value: formatSecondsToHumanReadable(longestDay.duration),
-              detail: formatStatDate(longestDay.timestamp),
+              detail: formatDateKey(longestDay.date),
               icon: IconClockStar,
             },
             {
@@ -124,7 +124,7 @@ export function StatsPage(): JSX.Element {
                 mostPagesInADay.pages !== null && mostPagesInADay.pages !== undefined
                   ? formatLocalizedNumber(mostPagesInADay.pages)
                   : 'N/A',
-              detail: formatStatDate(mostPagesInADay.timestamp),
+              detail: formatDateKey(mostPagesInADay.date),
               icon: IconFileStar,
             },
             {

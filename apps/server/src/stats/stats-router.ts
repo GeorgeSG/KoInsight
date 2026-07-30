@@ -9,19 +9,21 @@ const router = Router();
 /**
  * Get all stats
  */
-router.get('/', async (_: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   const books = await BooksRepository.getAllWithData();
   const totalPagesRead = StatsService.totalPagesRead(books);
 
   const stats = await StatsRepository.getAll();
+  const requestedTimeZone = typeof req.query.time_zone === 'string' ? req.query.time_zone : 'UTC';
+  const timeZone = StatsService.isValidTimeZone(requestedTimeZone) ? requestedTimeZone : 'UTC';
   const perMonth = StatsService.getPerMonthReadingTime(stats);
   const perDayOfTheWeek = StatsService.perDayOfTheWeek(stats);
-  const mostPagesInADay = StatsService.mostPagesInADay(books, stats);
+  const mostPagesInADay = StatsService.mostPagesInADay(books, stats, timeZone);
   const totalReadingTime = StatsService.totalReadingTime(stats);
-  const longestDay = StatsService.longestDay(stats);
+  const longestDay = StatsService.longestDay(stats, timeZone);
   const last7DaysReadTime = StatsService.last7DaysReadTime(stats);
-  const currentDailyReadingStreak = StatsService.currentDailyReadingStreak(stats);
-  const longestDailyReadingStreak = StatsService.longestDailyReadingStreak(stats);
+  const currentDailyReadingStreak = StatsService.currentDailyReadingStreak(stats, timeZone);
+  const longestDailyReadingStreak = StatsService.longestDailyReadingStreak(stats, timeZone);
 
   const response: GetAllStatsResponse = {
     stats,

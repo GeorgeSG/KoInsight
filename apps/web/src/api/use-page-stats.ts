@@ -4,7 +4,9 @@ import { fetchFromAPI } from './api';
 import { GetAllStatsResponse } from '@koinsight/common/types';
 
 export function usePageStats() {
-  return useSWR('stats', () => fetchFromAPI<GetAllStatsResponse>('stats'), {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  return useSWR(['stats', timeZone], () => fetchFromAPI<GetAllStatsResponse>('stats', 'GET', { time_zone: timeZone }), {
     fallbackData: {
       stats: [],
       perMonth: [],
