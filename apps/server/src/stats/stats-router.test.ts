@@ -54,6 +54,7 @@ describe('GET /stats', () => {
     expect(response.body).toHaveLength(2);
     expect(response.body[0]).toHaveProperty('start_time');
   });
+
   it('filters raw page stats by start and end timestamps', async () => {
     const inRange = new Date('2025-01-15T12:00:00.000Z').getTime();
     const outOfRange = new Date('2025-02-15T12:00:00.000Z').getTime();

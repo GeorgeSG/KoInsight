@@ -1,4 +1,4 @@
-import { Flex, Title } from '@mantine/core';
+import { Flex } from '@mantine/core';
 import { endOfDay, formatDate, startOfDay, subDays } from 'date-fns';
 import { JSX, useMemo } from 'react';
 import { usePageStats } from '../../api/use-page-stats';

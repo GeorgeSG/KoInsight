@@ -16,7 +16,6 @@ import {
   endOfWeek,
   format,
   formatDate,
-  getDay,
   isBefore,
   isSameDay,
   startOfDay,
@@ -72,7 +71,7 @@ export function WeekStats({ booksByMd5 }: { booksByMd5: Record<string, Book> }) 
           }
         }, 0) ?? 0
       ),
-    [weekData]
+    [booksByMd5, weekData]
   );
 
   const avgPagesPerDay = useMemo(() => {
@@ -92,7 +91,7 @@ export function WeekStats({ booksByMd5 }: { booksByMd5: Record<string, Book> }) 
     );
 
     return Math.round(sum(pagesPerDay) / pagesPerDay.length);
-  }, [weekData]);
+  }, [booksByMd5, weekData]);
 
   const perDay = useMemo(() => {
     const perDayResult = [];
@@ -110,7 +109,7 @@ export function WeekStats({ booksByMd5 }: { booksByMd5: Record<string, Book> }) 
     }
 
     return perDayResult;
-  }, [stats, weekStartDate, weekEnd]);
+  }, [stats, weekStart, weekEnd]);
 
   if (statsLoading) {
     return (

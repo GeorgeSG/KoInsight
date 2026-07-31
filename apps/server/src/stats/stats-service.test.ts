@@ -311,6 +311,54 @@ describe(StatsService, () => {
         end: '2026-07-29',
       });
     });
+
+    it('returns current streak when a historical streak is longer', () => {
+      const today = startOfDay(new Date('2025-04-10T15:00:00.000Z')).getTime();
+      vi.useFakeTimers();
+      vi.setSystemTime(today);
+
+      const stats = [1, 2, 5, 6, 7, 8, 9].map((daysAgo, index) => ({
+        page: index,
+        start_time: subDays(today, daysAgo).getTime(),
+        duration: 60,
+        total_pages: 100,
+        device_id: device.id,
+        book_md5: book.md5,
+      }));
+
+      expect(StatsService.currentDailyReadingStreak(stats)).toEqual({
+        days: 2,
+        start: '2025-04-08',
+        end: '2025-04-09',
+      });
+      expect(StatsService.longestDailyReadingStreak(stats).days).toEqual(5);
+    });
+
+    it('uses the requested timezone to decide whether a streak is current', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-07-30T15:00:00.000Z'));
+
+      const stats = [0, 1, 2].map((daysAgo, index) => ({
+        page: index,
+        start_time: subDays(new Date('2026-07-29T02:00:00.000Z'), daysAgo).getTime(),
+        duration: 60,
+        total_pages: 100,
+        device_id: device.id,
+        book_md5: book.md5,
+      }));
+
+      expect(StatsService.longestDailyReadingStreak(stats, 'America/Toronto')).toEqual({
+        days: 3,
+        start: '2026-07-26',
+        end: '2026-07-28',
+      });
+      expect(StatsService.currentDailyReadingStreak(stats, 'America/Toronto')).toEqual({ days: 0 });
+      expect(StatsService.currentDailyReadingStreak(stats, 'UTC')).toEqual({
+        days: 3,
+        start: '2026-07-27',
+        end: '2026-07-29',
+      });
+    });
   });
 
   describe(StatsService.longestDailyReadingStreak, () => {
