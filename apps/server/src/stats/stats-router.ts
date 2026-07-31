@@ -6,6 +6,15 @@ import { StatsService } from './stats-service';
 
 const router = Router();
 
+function parseTimestampQueryParam(value: unknown) {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const timestamp = Number(value);
+  return Number.isFinite(timestamp) ? timestamp : undefined;
+}
+
 /**
  * Get stats summary
  */
@@ -40,8 +49,10 @@ router.get('/', async (req: Request, res: Response) => {
 /**
  * Get raw page stats
  */
-router.get('/page-stats', async (_req: Request, res: Response) => {
-  const stats = await StatsRepository.getAll();
+router.get('/page-stats', async (req: Request, res: Response) => {
+  const start = parseTimestampQueryParam(req.query.start);
+  const end = parseTimestampQueryParam(req.query.end);
+  const stats = await StatsRepository.getAll({ start, end });
   res.status(200).json(stats);
 });
 

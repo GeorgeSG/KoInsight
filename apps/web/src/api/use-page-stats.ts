@@ -24,10 +24,26 @@ export function useStatsSummary() {
   );
 }
 
-export function usePageStats() {
-  return useSWR('stats/page-stats', () => fetchFromAPI<PageStat[]>('stats/page-stats'), {
-    fallbackData: [],
-  });
+type PageStatsRange = {
+  start?: number;
+  end?: number;
+};
+
+export function usePageStats(range: PageStatsRange = {}) {
+  const query = Object.fromEntries(
+    Object.entries(range).filter(([, value]) => value !== undefined)
+  );
+
+  return useSWR(
+    ['stats/page-stats', range.start, range.end],
+    () => fetchFromAPI<PageStat[]>('stats/page-stats', 'GET', query),
+    {
+      fallbackData: [],
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  );
 }
 
 export function useBookStats(bookMd5: string) {

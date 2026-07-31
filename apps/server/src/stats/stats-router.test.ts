@@ -54,4 +54,30 @@ describe('GET /stats', () => {
     expect(response.body).toHaveLength(2);
     expect(response.body[0]).toHaveProperty('start_time');
   });
+  it('filters raw page stats by start and end timestamps', async () => {
+    const inRange = new Date('2025-01-15T12:00:00.000Z').getTime();
+    const outOfRange = new Date('2025-02-15T12:00:00.000Z').getTime();
+
+    await createPageStat(db, book, bookDevice, device, {
+      duration: 10,
+      page: 1,
+      start_time: inRange / 1000,
+    });
+    await createPageStat(db, book, bookDevice, device, {
+      duration: 20,
+      page: 2,
+      start_time: outOfRange / 1000,
+    });
+
+    const response = await request(app).get(
+      `/stats/page-stats?start=${new Date('2025-01-01T00:00:00.000Z').getTime()}&end=${new Date(
+        '2025-01-31T23:59:59.999Z'
+      ).getTime()}`
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0].page).toBe(1);
+    expect(response.body[0].start_time).toBe(inRange);
+  });
 });
