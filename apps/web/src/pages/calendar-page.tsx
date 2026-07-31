@@ -18,10 +18,7 @@ type DayData = {
 
 export function CalendarPage(): JSX.Element {
   const { data: books, isLoading } = useBooks();
-  const {
-    data: { stats: events },
-    isLoading: eventsLoading,
-  } = usePageStats();
+  const { data: events, isLoading: eventsLoading } = usePageStats();
 
   const calendarEvents = useMemo<Record<string, CalendarEvent<DayData>>>(() => {
     if (eventsLoading || !events) {

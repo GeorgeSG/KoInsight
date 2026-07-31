@@ -1,24 +1,32 @@
-import { PageStat } from '@koinsight/common/types/page-stat';
+import { GetStatsSummaryResponse, PageStat } from '@koinsight/common/types';
 import useSWR from 'swr';
 import { fetchFromAPI } from './api';
-import { GetAllStatsResponse } from '@koinsight/common/types';
 
-export function usePageStats() {
+export function useStatsSummary() {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  return useSWR(['stats', timeZone], () => fetchFromAPI<GetAllStatsResponse>('stats', 'GET', { time_zone: timeZone }), {
-    fallbackData: {
-      stats: [],
-      perMonth: [],
-      perDayOfTheWeek: [],
-      mostPagesInADay: { pages: 0 },
-      totalReadingTime: 0,
-      longestDay: { duration: 0 },
-      last7DaysReadTime: 0,
-      currentDailyReadingStreak: 0,
-      longestDailyReadingStreak: { days: 0 },
-      totalPagesRead: 0,
-    },
+  return useSWR(
+    ['stats', timeZone],
+    () => fetchFromAPI<GetStatsSummaryResponse>('stats', 'GET', { time_zone: timeZone }),
+    {
+      fallbackData: {
+        perMonth: [],
+        perDayOfTheWeek: [],
+        mostPagesInADay: { pages: 0 },
+        totalReadingTime: 0,
+        longestDay: { duration: 0 },
+        last7DaysReadTime: 0,
+        currentDailyReadingStreak: 0,
+        longestDailyReadingStreak: { days: 0 },
+        totalPagesRead: 0,
+      },
+    }
+  );
+}
+
+export function usePageStats() {
+  return useSWR('stats/page-stats', () => fetchFromAPI<PageStat[]>('stats/page-stats'), {
+    fallbackData: [],
   });
 }
 

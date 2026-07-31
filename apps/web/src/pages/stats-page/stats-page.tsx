@@ -21,7 +21,7 @@ import { format } from 'date-fns';
 import { JSX, useMemo } from 'react';
 import { BarProps } from 'recharts';
 import { useBooks } from '../../api/books';
-import { usePageStats } from '../../api/use-page-stats';
+import { useStatsSummary } from '../../api/use-page-stats';
 import { CustomBar } from '../../components/charts/custom-bar';
 import { ReadingCalendar } from '../../components/statistics/reading-calendar';
 import { Statistics } from '../../components/statistics/statistics';
@@ -35,7 +35,6 @@ export function StatsPage(): JSX.Element {
 
   const {
     data: {
-      stats,
       perMonth,
       perDayOfTheWeek,
       mostPagesInADay,
@@ -47,7 +46,7 @@ export function StatsPage(): JSX.Element {
       totalPagesRead,
     },
     isLoading: statsLoading,
-  } = usePageStats();
+  } = useStatsSummary();
 
   const booksByMd5 = useMemo(() => {
     return books?.reduce(
@@ -150,7 +149,7 @@ export function StatsPage(): JSX.Element {
       <Title mt="xl" mb={4} order={3}>
         Weekly stats
       </Title>
-      <WeekStats stats={stats} booksByMd5={booksByMd5} />
+      <WeekStats booksByMd5={booksByMd5} />
       <Title mt="xl" order={3}>
         Per day of the week
       </Title>

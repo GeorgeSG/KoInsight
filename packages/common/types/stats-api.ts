@@ -1,5 +1,3 @@
-import { PageStat } from './page-stat';
-
 export type PerMonthReadingTime = {
   month: string;
   duration: number;
@@ -29,8 +27,7 @@ export type DailyReadingStreak = {
   end?: string;
 };
 
-export type GetAllStatsResponse = {
-  stats: PageStat[];
+export type GetStatsSummaryResponse = {
   perMonth: PerMonthReadingTime[];
   perDayOfTheWeek: PerDayOfTheWeek[];
   mostPagesInADay: ReadingPageStat;

@@ -6,9 +6,7 @@ import { formatSecondsToHumanReadable } from '../../utils/dates';
 import { DayData, DotTrail } from '../dot-trail/dot-trail';
 
 export function ReadingCalendar(): JSX.Element {
-  const {
-    data: { stats },
-  } = usePageStats();
+  const { data: stats } = usePageStats();
 
   const percentPerDay: Record<number, DayData> = useMemo(() => {
     const timePerDay = stats.reduce<Record<number, number>>((acc, stat) => {
