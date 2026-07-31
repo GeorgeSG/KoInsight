@@ -17,11 +17,11 @@ import {
   IconFlame,
   IconTrophy,
 } from '@tabler/icons-react';
-import { format, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { JSX, useMemo } from 'react';
 import { BarProps } from 'recharts';
 import { useBooks } from '../../api/books';
-import { usePageStats } from '../../api/use-page-stats';
+import { useStatsSummary } from '../../api/use-page-stats';
 import { CustomBar } from '../../components/charts/custom-bar';
 import { ReadingCalendar } from '../../components/statistics/reading-calendar';
 import { Statistics } from '../../components/statistics/statistics';
@@ -35,7 +35,6 @@ export function StatsPage(): JSX.Element {
 
   const {
     data: {
-      stats,
       perMonth,
       perDayOfTheWeek,
       mostPagesInADay,
@@ -47,7 +46,7 @@ export function StatsPage(): JSX.Element {
       totalPagesRead,
     },
     isLoading: statsLoading,
-  } = usePageStats();
+  } = useStatsSummary();
 
   const booksByMd5 = useMemo(() => {
     return books?.reduce(
@@ -62,86 +61,13 @@ export function StatsPage(): JSX.Element {
   const formatStreakDays = (value: number) => `${value} day${value === 1 ? '' : 's'}`;
   const formatLocalizedNumber = (value: number) => new Intl.NumberFormat().format(value);
 
-  const formatStatDate = (dayTimestamp?: number) =>
-    dayTimestamp ? format(dayTimestamp, 'MMM d, yyyy') : 'No reading data yet';
+  const formatDateKey = (dateKey?: string) =>
+    dateKey ? format(new Date(`${dateKey}T12:00:00`), 'MMM d, yyyy') : 'No reading data yet';
 
-  const { longestDayTimestamp, mostPagesDayTimestamp, longestStreakRange } = useMemo(() => {
-    if (!stats?.length) {
-      return {
-        longestDayTimestamp: undefined,
-        mostPagesDayTimestamp: undefined,
-        longestStreakRange: undefined,
-      };
-    }
-
-    const durationPerDay = new Map<number, number>();
-    const pagesPerDay = new Map<number, number>();
-
-    for (const stat of stats) {
-      const dayStart = startOfDay(stat.start_time).getTime();
-      durationPerDay.set(dayStart, (durationPerDay.get(dayStart) ?? 0) + stat.duration);
-
-      const referencePages = booksByMd5?.[stat.book_md5]?.reference_pages;
-      const pagesForStat = stat.total_pages && referencePages ? (1 / stat.total_pages) * referencePages : 1;
-      pagesPerDay.set(dayStart, (pagesPerDay.get(dayStart) ?? 0) + pagesForStat);
-    }
-
-    let longestDayEntry: [number, number] | undefined;
-    for (const entry of durationPerDay.entries()) {
-      if (!longestDayEntry || entry[1] > longestDayEntry[1]) {
-        longestDayEntry = entry;
-      }
-    }
-
-    let mostPagesEntry: [number, number] | undefined;
-    for (const entry of pagesPerDay.entries()) {
-      if (!mostPagesEntry || entry[1] > mostPagesEntry[1]) {
-        mostPagesEntry = entry;
-      }
-    }
-
-    const uniqueDays = Array.from(durationPerDay.keys()).sort((a, b) => a - b);
-
-    let bestStart = uniqueDays[0];
-    let bestEnd = uniqueDays[0];
-    let bestLength = 1;
-
-    let currentStart = uniqueDays[0];
-    let currentEnd = uniqueDays[0];
-    let currentLength = 1;
-
-    for (let i = 1; i < uniqueDays.length; i += 1) {
-      const currentDay = uniqueDays[i];
-      const previousDay = uniqueDays[i - 1];
-      const isConsecutive = currentDay - previousDay === 24 * 60 * 60 * 1000;
-
-      if (isConsecutive) {
-        currentEnd = currentDay;
-        currentLength += 1;
-      } else {
-        if (currentLength > bestLength) {
-          bestStart = currentStart;
-          bestEnd = currentEnd;
-          bestLength = currentLength;
-        }
-
-        currentStart = currentDay;
-        currentEnd = currentDay;
-        currentLength = 1;
-      }
-    }
-
-    if (currentLength > bestLength) {
-      bestStart = currentStart;
-      bestEnd = currentEnd;
-    }
-
-    return {
-      longestDayTimestamp: longestDayEntry?.[0],
-      mostPagesDayTimestamp: mostPagesEntry?.[0],
-      longestStreakRange: `${format(bestStart, 'MMM d, yyyy')} - ${format(bestEnd, 'MMM d, yyyy')}`,
-    };
-  }, [stats, booksByMd5]);
+  const formatDateRange = (dateRange?: { start?: string; end?: string }) =>
+    dateRange?.start && dateRange.end
+      ? `${formatDateKey(dateRange.start)} - ${formatDateKey(dateRange.end)}`
+      : 'N/A';
 
   if (booksLoading || statsLoading) {
     return (
@@ -187,17 +113,17 @@ export function StatsPage(): JSX.Element {
             },
             {
               label: 'Longest time reading in a day',
-              value: formatSecondsToHumanReadable(longestDay),
-              detail: formatStatDate(longestDayTimestamp),
+              value: formatSecondsToHumanReadable(longestDay.duration),
+              detail: formatDateKey(longestDay.date),
               icon: IconClockStar,
             },
             {
               label: 'Most pages in a day',
               value:
-                mostPagesInADay !== null && mostPagesInADay !== undefined
-                  ? formatLocalizedNumber(mostPagesInADay)
+                mostPagesInADay.pages !== null && mostPagesInADay.pages !== undefined
+                  ? formatLocalizedNumber(mostPagesInADay.pages)
                   : 'N/A',
-              detail: formatStatDate(mostPagesDayTimestamp),
+              detail: formatDateKey(mostPagesInADay.date),
               icon: IconFileStar,
             },
             {
@@ -207,8 +133,8 @@ export function StatsPage(): JSX.Element {
             },
             {
               label: 'Longest Daily Reading Streak',
-              value: formatStreakDays(longestDailyReadingStreak),
-              detail: longestStreakRange ?? 'N/A',
+              value: formatStreakDays(longestDailyReadingStreak.days),
+              detail: formatDateRange(longestDailyReadingStreak),
               icon: IconTrophy,
             },
           ]}
@@ -223,7 +149,7 @@ export function StatsPage(): JSX.Element {
       <Title mt="xl" mb={4} order={3}>
         Weekly stats
       </Title>
-      <WeekStats stats={stats} booksByMd5={booksByMd5} />
+      <WeekStats booksByMd5={booksByMd5} />
       <Title mt="xl" order={3}>
         Per day of the week
       </Title>

@@ -1,7 +1,7 @@
 import { Book } from '@koinsight/common/types/book';
 import { PageStat } from '@koinsight/common/types/page-stat';
 import { AreaChart } from '@mantine/charts';
-import { Flex, Popover, Text, useComputedColorScheme, useMantineTheme } from '@mantine/core';
+import { Flex, Loader, Popover, Text, useComputedColorScheme, useMantineTheme } from '@mantine/core';
 import { DatePicker } from '@mantine/dates';
 import {
   IconArrowsVertical,
@@ -24,16 +24,12 @@ import {
 } from 'date-fns';
 import { groupBy, sum } from 'ramda';
 import { useMemo, useState } from 'react';
+import { usePageStats } from '../../api/use-page-stats';
 import { Statistics } from '../../components/statistics/statistics';
 import { formatSecondsToHumanReadable } from '../../utils/dates';
 
-export function WeekStats({
-  stats,
-  booksByMd5,
-}: {
-  stats: PageStat[];
-  booksByMd5: Record<string, Book>;
-}) {
+export function WeekStats({ booksByMd5 }: { booksByMd5: Record<string, Book> }) {
+  const { data: stats, isLoading: statsLoading } = usePageStats();
   const colorScheme = useComputedColorScheme();
   const { colors } = useMantineTheme();
 
@@ -107,6 +103,14 @@ export function WeekStats({
 
     return perDayResult;
   }, [stats, weekStart, weekEnd]);
+
+  if (statsLoading) {
+    return (
+      <Flex justify="center" align="center" h={300}>
+        <Loader />
+      </Flex>
+    );
+  }
 
   return (
     <>

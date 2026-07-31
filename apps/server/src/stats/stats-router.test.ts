@@ -23,7 +23,7 @@ describe('GET /stats', () => {
     bookDevice = await createBookDevice(db, book, device, { pages: 100 });
   });
 
-  it('returns all stats', async () => {
+  it('returns stats summary', async () => {
     await createPageStat(db, book, bookDevice, device, { duration: 10, page: 1 });
     await createPageStat(db, book, bookDevice, device, { duration: 20, page: 2 });
     await createPageStat(db, book, bookDevice, device, { duration: 10, page: 3 });
@@ -36,9 +36,22 @@ describe('GET /stats', () => {
 
     // TODO: Do we need a more detailed test here provided everything is from the StatsService?
     expect(body).toHaveProperty('perMonth');
-    expect(body.longestDay).toBe(20);
+    expect(body).not.toHaveProperty('stats');
+    expect(body.longestDay.duration).toBe(20);
+    expect(body.mostPagesInADay).toHaveProperty('pages');
     expect(body.totalPagesRead).toBe(4);
     expect(body).toHaveProperty('currentDailyReadingStreak');
-    expect(body).toHaveProperty('longestDailyReadingStreak');
+    expect(body.longestDailyReadingStreak).toHaveProperty('days');
+  });
+
+  it('returns raw page stats from the page-stats endpoint', async () => {
+    await createPageStat(db, book, bookDevice, device, { duration: 10, page: 1 });
+    await createPageStat(db, book, bookDevice, device, { duration: 20, page: 2 });
+
+    const response = await request(app).get('/stats/page-stats');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(2);
+    expect(response.body[0]).toHaveProperty('start_time');
   });
 });
