@@ -64,7 +64,7 @@ Add the following to your `compose.yaml` file:
 name: koinsight
 services:
   koinsight:
-    image: ghcr.io/georgesg/koinsight:latest
+    image: ghcr.io/ko-insight/koinsight:latest
     restart: unless-stopped
     ports:
       - "3000:3000"
