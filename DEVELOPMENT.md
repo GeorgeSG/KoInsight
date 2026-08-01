@@ -68,6 +68,12 @@ This will install dependencies for:
 
 The development database uses SQLite and is stored in the `data/` directory.
 
+Create the `data/` directory if it does not exist (better-sqlite3 will not create the parent folder and migrations will fail otherwise):
+
+```bash
+mkdir -p data
+```
+
 Run database migrations:
 
 ```bash
@@ -115,6 +121,8 @@ This uses Turbo to run both apps in parallel:
 - **Backend server**: http://localhost:3000 (Express API)
 - **Frontend web app**: http://localhost:5173 (Vite dev server)
 
+The web app automatically points at `http://localhost:3000` for the API in dev mode.
+
 #### Option 2: Run Apps Individually
 
 **Backend only:**
@@ -122,21 +130,34 @@ This uses Turbo to run both apps in parallel:
 cd apps/server
 npm run dev
 ```
-- Runs on http://localhost:3001
-- Watches for TypeScript changes and auto-restarts
+- Runs on http://localhost:3000 by default (override with `PORT`)
+- Watches for TypeScript changes and auto-restarts via nodemon
 
 **Frontend only:**
 ```bash
 cd apps/web
 npm run dev
 ```
-- Runs on http://localhost:3000
+- Runs on http://localhost:5173 by default (override with `VITE_WEB_PORT`)
 - Hot module replacement enabled
+- Talks to the API at `http://localhost:${PORT}` in dev (override with `VITE_WEB_API_URL`)
+
+
+### Port and API URL Configuration
+
+| Variable | Default | Used by |
+|----------|---------|---------|
+| `PORT` | `3000` | Express server (`apps/server`) |
+| `VITE_WEB_PORT` | `5173` | Vite dev server (`apps/web`) |
+| `VITE_WEB_HOSTNAME` | `localhost` | Vite dev server bind host |
+| `VITE_WEB_API_URL` | `http://localhost:${PORT}` in dev, empty in prod | Web app API base URL |
+
+If you change the backend `PORT`, set `VITE_WEB_API_URL` to match (e.g. `PORT=4000 VITE_WEB_API_URL=http://localhost:4000 npm run dev`).
 
 
 ### Development Tips
 
-1. **Frontend proxy**: The Vite dev server (port 3000) proxies API requests to the backend (port 3001)
+1. **No Vite proxy**: The web app calls the backend directly using `VITE_WEB_API_URL` (see `apps/web/src/api/api.ts`). In production builds it is empty so requests hit the same origin, since the server serves the built frontend.
 2. **Hot reload**: Both apps support hot reloading during development
 3. **TypeScript**: Changes to TypeScript files trigger automatic recompilation
 4. **Shared types**: The `@koinsight/common` package contains types shared between frontend and backend
@@ -216,7 +237,7 @@ koinsight/
 npm run -w server knex migrate:latest
 
 # Rollback last migration
-npm run -w serverknex migrate:rollback
+npm run -w server knex migrate:rollback
 
 # Create a new migration
 npm run -w server knex migrate:make migration_name
@@ -265,6 +286,9 @@ If you need a fresh start:
 ```bash
 # Delete the database
 rm data/dev.db
+
+# Make sure the data directory exists
+mkdir -p data
 
 # Run migrations
 npm run -w server knex migrate:latest
