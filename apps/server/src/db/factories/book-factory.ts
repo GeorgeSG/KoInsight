@@ -13,6 +13,7 @@ export function fakeBook(overrides: Partial<FakeBook> = {}): FakeBook {
     series: faker.book.series(),
     language: faker.location.language().alpha2,
     soft_deleted: false,
+    status: null,
     ...overrides,
   };
 

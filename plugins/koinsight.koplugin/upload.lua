@@ -53,6 +53,17 @@ end
 function send_statistics_data(server_url, silent)
   local url = server_url .. API_UPLOAD_LOCATION
 
+  -- Get book data and statuses
+  local books = KoInsightDbReader.bookData()
+  local statuses = KoInsightDbReader.getBookStatuses()
+
+  -- Merge statuses into book data
+  for _, book in ipairs(books) do
+    if book.md5 and statuses[book.md5] then
+      book.status = statuses[book.md5]
+    end
+  end
+
   -- Get annotations from currently opened book
   local annotations = KoInsightAnnotationReader.getAnnotationsByBook()
 
@@ -67,7 +78,7 @@ function send_statistics_data(server_url, silent)
 
   local body = {
     stats = KoInsightDbReader.progressData(),
-    books = KoInsightDbReader.bookData(),
+    books = books,
     annotations = annotations,
     version = const.VERSION,
   }
