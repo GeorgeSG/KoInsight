@@ -76,6 +76,11 @@ function send_statistics_data(server_url, silent)
 
   local ok, response = callApi("POST", url, get_headers(body), body)
 
+  if ok and type(response) == "table" and response.missing_cover_md5 then
+    local cover_sync = require("cover_sync")
+    cover_sync.syncMissingCovers(server_url, response.missing_cover_md5, silent)
+  end
+
   if not silent then
     if ok then
       render_response_message(response, "Success:", "Data uploaded.")
@@ -131,7 +136,11 @@ function send_book_annotations(server_url, book_md5, annotations, total_pages, b
   }
 
   body = JSON.encode(body)
-  return callApi("POST", url, get_headers(body), body)
+  local ok, response = callApi("POST", url, get_headers(body), body)
+  if ok and type(response) == "table" and response.missing_cover_md5 then
+    require("cover_sync").syncMissingCovers(server_url, response.missing_cover_md5, true)
+  end
+  return ok, response
 end
 
 -- Bulk sync all books with annotations

@@ -19,7 +19,9 @@ New syncs won't create duplicates. If you still see duplicates, you most likely 
 
 ### Breaking Changes
 
-Plugin version 0.3.0 required. Update it before syncing.
+Plugin version 0.3.1 required. Update it before syncing.
+
+KOReader cover sync: after import, the server returns `missing_cover_md5` and the plugin uploads PNG covers for those books when it can resolve a filepath via reading history.
 
 ---
 

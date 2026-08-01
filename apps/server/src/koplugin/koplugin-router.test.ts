@@ -1,5 +1,8 @@
 import express from 'express';
+import { mkdirSync, writeFileSync } from 'fs';
+import path from 'path';
 import request from 'supertest';
+import { appConfig } from '../config';
 import { createDevice } from '../db/factories/device-factory';
 import { fakeKoReaderAnnotation } from '../db/factories/koreader-annotation-factory';
 import { db } from '../knex';
@@ -100,7 +103,8 @@ describe('koplugin-router', () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ message: 'Upload successful' });
+      expect(response.body.message).toBe('Upload successful');
+      expect(response.body.missing_cover_md5).toContain(bookMd5);
 
       const book = await db('book').where({ md5: bookMd5 }).first();
       expect(book).toEqual(
@@ -172,7 +176,8 @@ describe('koplugin-router', () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ message: 'Upload successful' });
+      expect(response.body.message).toBe('Upload successful');
+      expect(response.body.missing_cover_md5).toContain(bookMd5);
 
       const book = await db('book').where({ md5: bookMd5 }).first();
       expect(book).toEqual(
@@ -213,6 +218,173 @@ describe('koplugin-router', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error).toContain('Unsupported plugin version');
+    });
+
+    it('omits md5 from missing_cover_md5 when a cover file already exists', async () => {
+      const bookMd5 = 'cover_exists_md5_12';
+      const device = await createDevice(db);
+
+      mkdirSync(appConfig.coversPath, { recursive: true });
+      writeFileSync(path.join(appConfig.coversPath, `${bookMd5}.jpg`), Buffer.from([0xff, 0xd8, 0xff]));
+
+      const response = await request(app)
+        .post('/koplugin/import')
+        .send({
+          version: REQUIRED_PLUGIN_VERSION,
+          books: [
+            {
+              md5: bookMd5,
+              title: 'Has Cover On Disk',
+              authors: 'Author',
+              language: 'en',
+              pages: 50,
+              total_read_time: 0,
+              total_read_pages: 0,
+            },
+          ],
+          stats: [
+            {
+              book_md5: bookMd5,
+              device_id: device.id,
+              start_time: 3000,
+              duration: 30,
+              page: 1,
+              total_pages: 50,
+            },
+          ],
+          annotations: {},
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.missing_cover_md5).not.toContain(bookMd5);
+    });
+  });
+
+  describe('POST /koplugin/books/:md5/cover', () => {
+    it('uploads a cover image for a book', async () => {
+      const bookMd5 = 'plugin_cover_upload_md5';
+      const device = await createDevice(db);
+
+      await request(app)
+        .post('/koplugin/import')
+        .send({
+          version: REQUIRED_PLUGIN_VERSION,
+          books: [
+            {
+              md5: bookMd5,
+              title: 'Cover Upload Book',
+              authors: 'Author',
+              language: 'en',
+              pages: 10,
+              total_read_time: 0,
+              total_read_pages: 0,
+            },
+          ],
+          stats: [
+            {
+              book_md5: bookMd5,
+              device_id: device.id,
+              start_time: 4000,
+              duration: 10,
+              page: 1,
+              total_pages: 10,
+            },
+          ],
+          annotations: {},
+        });
+
+      const pngBytes = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        'base64'
+      );
+
+      const response = await request(app)
+        .post(`/koplugin/books/${encodeURIComponent(bookMd5)}/cover`)
+        .field('version', REQUIRED_PLUGIN_VERSION)
+        .attach('file', pngBytes, 'cover.png');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ message: 'Cover updated' });
+
+      mkdirSync(appConfig.coversPath, { recursive: true });
+      const importAgain = await request(app)
+        .post('/koplugin/import')
+        .send({
+          version: REQUIRED_PLUGIN_VERSION,
+          books: [
+            {
+              md5: bookMd5,
+              title: 'Cover Upload Book',
+              authors: 'Author',
+              language: 'en',
+              pages: 10,
+              total_read_time: 0,
+              total_read_pages: 0,
+            },
+          ],
+          stats: [],
+          annotations: {},
+        });
+      expect(importAgain.body.missing_cover_md5).not.toContain(bookMd5);
+    });
+
+    it('returns 404 when book md5 is unknown', async () => {
+      const pngBytes = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        'base64'
+      );
+
+      const response = await request(app)
+        .post('/koplugin/books/unknown_md5_xyz/cover')
+        .field('version', REQUIRED_PLUGIN_VERSION)
+        .attach('file', pngBytes, 'cover.png');
+
+      expect(response.status).toBe(404);
+    });
+
+    it('returns 400 when plugin version is wrong', async () => {
+      const bookMd5 = 'version_check_cover_md5';
+      const device = await createDevice(db);
+
+      await request(app)
+        .post('/koplugin/import')
+        .send({
+          version: REQUIRED_PLUGIN_VERSION,
+          books: [
+            {
+              md5: bookMd5,
+              title: 'V Book',
+              authors: 'A',
+              language: 'en',
+              pages: 5,
+              total_read_time: 0,
+              total_read_pages: 0,
+            },
+          ],
+          stats: [
+            {
+              book_md5: bookMd5,
+              device_id: device.id,
+              start_time: 5000,
+              duration: 5,
+              page: 1,
+              total_pages: 5,
+            },
+          ],
+          annotations: {},
+        });
+
+      const pngBytes = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        'base64'
+      );
+
+      const response = await request(app)
+        .post(`/koplugin/books/${bookMd5}/cover`)
+        .field('version', '0.1.0')
+        .attach('file', pngBytes, 'cover.png');
+
+      expect(response.status).toBe(400);
     });
   });
 

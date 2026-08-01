@@ -18,6 +18,10 @@ export class BooksRepository {
     return db<Book>('book').where({ id }).first();
   }
 
+  static async getByMd5(md5: Book['md5']): Promise<Book | undefined> {
+    return db<Book>('book').where({ md5 }).first();
+  }
+
   static async insert(book: Partial<Book>): Promise<number[]> {
     return db<Book>('book').insert(book);
   }

@@ -118,6 +118,8 @@ The KoInsight plugin syncs your reading statistics from KOReader to KoInsight.
     - ⚠️ Make sure your KOReader device has network access to the server.
 1. Click **Sync** in the KoInsight plugin menu.
 
+After a successful sync, the server may ask the plugin to upload **book covers** that KoInsight does not have yet. The plugin then looks up each book’s file path from **KOReader reading history**, extracts a cover (from the CoverBrowser cache when available, otherwise by opening the document), and sends it to the server. Books that never appear in history cannot be matched to a file on disk, so open them at least once before syncing if you want their covers uploaded.
+
 Reload the KoInsight web dashboard. If everything went well (🤞), your data should appear.
 
 ### Manual Upload: `statistics.sqlite`
