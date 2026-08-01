@@ -11,7 +11,17 @@ export default ({ mode }) => {
   return defineConfig({
     plugins: [react(), svgr()],
     css: { postcss: './postcss.config.cjs' },
-    server: { host: HOST, port: PORT },
+    server: {
+      host: HOST,
+      port: PORT,
+      strictPort: true,
+      // In dev, the Express API runs on port 3001 (see apps/server dev script).
+      // Proxy the server's routes so the frontend's relative fetches work with HMR.
+      proxy: {
+        '/api': 'http://localhost:3001',
+        '/syncs': 'http://localhost:3001',
+      },
+    },
     define: { '__APP_VERSION__': JSON.stringify(process.env.npm_package_version) },
     build: {
       target: 'esnext',

@@ -5,9 +5,9 @@
   "license": "MIT",
   "scripts": {
     "start": "node dist/app.js",
-    "build": "tsc -b",
+    "build": "tsc",
     "build:migrations": "tsc -p tsconfig.migrations.json",
-    "dev": "NODE_ENV=development nodemon src/app.ts",
+    "dev": "NODE_ENV=development PORT=3001 nodemon src/app.ts",
     "knex": "DATA_PATH=../../../data knex --knexfile ./src/knexfile.ts",
     "seed": "npm run knex seed:run --env=development",
     "test": "npm run build:migrations && vitest run",

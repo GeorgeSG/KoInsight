@@ -5,11 +5,14 @@
     "NODE_ENV",
     "HOSTNAME",
     "PORT",
+    "DATA_PATH",
+    "MAX_FILE_SIZE_MB",
     "VITE_WEB_HOSTNAME",
     "VITE_WEB_PORT",
+    "VITE_WEB_API_URL",
     "OPENAI_API_KEY",
-    "OPENAI_API_URL",
-    "OPENAI_API_VERSION"
+    "OPENAI_PROJECT_ID",
+    "OPENAI_ORG_ID"
   ],
   "tasks": {
     "build": {
@@ -24,7 +27,8 @@
       "cache": false
     },
     "test:coverage": {
-      "dependsOn": ["^test:coverage"]
+      "dependsOn": ["^test:coverage"],
+      "outputs": ["test/coverage/**"]
     }
   }
 }

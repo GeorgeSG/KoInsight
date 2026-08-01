@@ -14,7 +14,7 @@
   "scripts": {
     "build": "turbo run build",
     "test:coverage": "turbo run test:coverage",
-    "dev": "turbo run dev --parallel",
+    "dev": "turbo run dev",
     "seed": "npm --workspace=server run seed"
   },
   "devDependencies": {
