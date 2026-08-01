@@ -28,13 +28,11 @@
     "multer": "2.0.2",
     "openai": "6.16.0",
     "ramda": "0.31.1",
-    "sqlite3": "5.1.7",
     "zod": "4.3.5"
   },
   "devDependencies": {
     "@faker-js/faker": "10.2.0",
     "@types/archiver": "7.0.0",
-    "@types/bcrypt": "6.0.0",
     "@types/better-sqlite3": "7.6.13",
     "@types/cors": "2.8.19",
     "@types/express": "5.0.6",
@@ -48,7 +46,6 @@
     "nodemon": "3.1.11",
     "supertest": "7.1.4",
     "ts-node": "10.9.2",
-    "tsx": "4.21.0",
     "typescript": "5.9.3",
     "vitest": "4.0.16"
   }
