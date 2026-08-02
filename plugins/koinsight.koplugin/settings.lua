@@ -218,29 +218,29 @@ function KoInsightSettings:editServerSettings()
         {
           text = _("Apply"),
           callback = function()
-              local myfields = self.settings_dialog:getFields()
-              local server_url = myfields[1]
+            local myfields = self.settings_dialog:getFields()
+            local server_url = myfields[1]
 
-              if server_url == "" then
-                  UIManager:show(InfoMessage:new({
-                      text = _("Please enter a server URL."),
-                  }))
-                  return
-              end
+            if server_url == "" then
+                UIManager:show(InfoMessage:new({
+                    text = _("Please enter a server URL."),
+                }))
+                return
+            end
 
-              if not server_url:match("^https?://") then
-                  UIManager:show(InfoMessage:new({
-                      text = _("The server URL must start with 'http://' or 'https://'.\n\n"),
-                  }))
-                  return
-              end
+            if not server_url:match("^https?://") then
+                UIManager:show(InfoMessage:new({
+                    text = _("The server URL must start with 'http://' or 'https://'.\n\n"),
+                }))
+                return
+            end
 
-              self:setServerURL(server_url)
-              UIManager:close(self.settings_dialog)
-              UIManager:show(InfoMessage:new({
-                  text = _("KoInsight settings saved."),
-                  timeout = 2,
-              }))
+            self:setServerURL(server_url)
+            UIManager:close(self.settings_dialog)
+            UIManager:show(InfoMessage:new({
+                text = _("KoInsight settings saved."),
+                timeout = 2,
+            }))
           end,
         },
       },
