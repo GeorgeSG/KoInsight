@@ -1,10 +1,10 @@
 import { PageStat } from '@koinsight/common/types';
 import { Book } from '@koinsight/common/types/book';
-import { Anchor, Flex, Loader, Title } from '@mantine/core';
+import { Anchor, Flex, Loader, Switch, Title } from '@mantine/core';
 import { IconClock } from '@tabler/icons-react';
 import { startOfDay } from 'date-fns/startOfDay';
 import { sum, uniq } from 'ramda';
-import { JSX, useCallback, useMemo } from 'react';
+import { JSX, useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useBooks } from '../api/books';
 import { usePageStats } from '../api/use-page-stats';
@@ -22,6 +22,8 @@ export function CalendarPage(): JSX.Element {
     data: { stats: events },
     isLoading: eventsLoading,
   } = usePageStats();
+
+  const [hideEmpty, setHideEmpty] = useState(false);
 
   const calendarEvents = useMemo<Record<string, CalendarEvent<DayData>>>(() => {
     if (eventsLoading || !events) {
@@ -42,8 +44,31 @@ export function CalendarPage(): JSX.Element {
       return acc;
     }, {});
 
-    return eventsList;
-  }, [events, eventsLoading]);
+    if (!hideEmpty) {
+      return eventsList;
+    }
+
+    return Object.entries(eventsList).reduce<Record<string, CalendarEvent<DayData>>>(
+      (acc, [key, entry]) => {
+        const totalsByBook = entry.data!.events.reduce<Record<string, number>>((totals, event) => {
+          totals[event.book_md5] = (totals[event.book_md5] ?? 0) + event.duration;
+          return totals;
+        }, {});
+
+        const filtered = entry.data!.events.filter(
+          (event) => totalsByBook[event.book_md5] >= 60
+        );
+
+        if (filtered.length === 0) {
+          return acc;
+        }
+
+        acc[key] = { ...entry, data: { events: filtered } };
+        return acc;
+      },
+      {}
+    );
+  }, [events, eventsLoading, hideEmpty]);
 
   const getBookByMd5 = useCallback(
     (md5: Book['md5']) => books?.find((book) => book.md5 === md5),
@@ -88,7 +113,14 @@ export function CalendarPage(): JSX.Element {
 
   return (
     <>
-      <Title mb="xl">Calendar</Title>
+      <Flex justify="space-between" align="center" mb="xl" wrap="wrap" gap="md">
+        <Title>Calendar</Title>
+        <Switch
+          label="Hide entries under a minute"
+          checked={hideEmpty}
+          onChange={(e) => setHideEmpty(e.currentTarget.checked)}
+        />
+      </Flex>
       <Calendar<DayData>
         events={calendarEvents}
         dayRenderer={(data) => getBookNames(data).map((el) => <div>{el}</div>)}
