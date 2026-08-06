@@ -1,9 +1,9 @@
 import { Book, BookDevice, BookWithData, PageStat } from '@koinsight/common/types';
+import { normalizeRanges, Range, totalRangeLength } from '@koinsight/common/utils/ranges';
 import { startOfDay } from 'date-fns';
 import { AnnotationsRepository } from '../annotations/annotations-repository';
 import { GenreRepository } from '../genres/genre-repository';
 import { StatsRepository } from '../stats/stats-repository';
-import { normalizeRanges, Range, totalRangeLength } from '../utils/ranges';
 import { BooksRepository } from './books-repository';
 
 export class BooksService {

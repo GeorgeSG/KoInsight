@@ -1,4 +1,5 @@
 import { BookWithData, PageStat } from '@koinsight/common/types';
+import { normalizeRanges } from '@koinsight/common/utils/ranges';
 import { startOfDay } from 'date-fns/startOfDay';
 
 export type Range = [number, number];
@@ -24,28 +25,6 @@ export function getLatestReadPage(book: BookWithData): number {
   }
 
   return Math.max(...latestDayStats.map((stat) => stat.page));
-}
-
-export function normalizeRanges(ranges: Range[]): Range[] {
-  const epsilon = 1e-9;
-  const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
-  const result: Range[] = [];
-
-  for (const [start, end] of sorted) {
-    if (result.length === 0) {
-      result.push([start, end]);
-      continue;
-    }
-
-    const last = result[result.length - 1];
-    if (start <= last[1] + epsilon) {
-      last[1] = Math.max(last[1], end);
-    } else {
-      result.push([start, end]);
-    }
-  }
-
-  return result;
 }
 
 export function getReferencePageRanges(book: BookWithData, stats: PageStat[]): Range[] {
