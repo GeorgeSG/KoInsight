@@ -1,10 +1,8 @@
 import { BookWithData, PageStat } from '@koinsight/common/types';
-import { IconClock } from '@tabler/icons-react';
 import { startOfDay } from 'date-fns/startOfDay';
-import { sum } from 'ramda';
 import { JSX } from 'react';
 import { Calendar, CalendarEvent } from '../../components/calendar/calendar';
-import { getDuration, shortDuration } from '../../utils/dates';
+import { CalendarBookDay } from '../../components/calendar/calendar-book-day';
 
 type BookPageCalendarProps = {
   book: BookWithData;
@@ -29,12 +27,7 @@ export function BookPageCalendar({ book }: BookPageCalendarProps): JSX.Element {
   return (
     <Calendar<DayData>
       events={calendarEvents}
-      dayRenderer={(data) => (
-        <>
-          <IconClock size={14} />{' '}
-          {shortDuration(getDuration(sum(data.events.map((event) => event.duration))))}
-        </>
-      )}
+      dayRenderer={(data) => <CalendarBookDay book={book} data={data} />}
     />
   );
 }
