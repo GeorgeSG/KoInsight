@@ -1,4 +1,4 @@
-import { normalizeRanges, Range, totalRangeLength } from './ranges';
+import { normalizeRanges, Range, totalRangeLength } from '@koinsight/common/utils/ranges';
 
 describe(normalizeRanges, () => {
   it('normalizes overlapping ranges', () => {
